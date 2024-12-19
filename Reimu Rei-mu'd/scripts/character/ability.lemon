@@ -1,0 +1,447 @@
+// Here we're replacing the Super Flicky object with the Gohei Stick. Reimu will never be able to use them in normal gameplay so this affects nothing if I change it.
+
+// How it works:
+
+// Imagine Pyra's Blazing End in SSBU, but you charge it. Yeah.
+
+//# address-hook(0x01a19c) end(0x01a1ee)
+function void fn01a19c()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		base.fn01a19c()
+		return
+	}
+
+	objA0.mapping_offset = 0x01a464
+	objA0.render_flags = render_flag.WORLD
+	objA0.sprite_priority = 0x80
+	objA0.box_size.x = 0x40
+	objA0.box_size.y = 0x40
+	objA0.sprite_attributes = (sprite_attribute.PRIORITY | (Char.Player1.targetInVRAM >> 5))
+	objA0.position.x.u16 = u16[0xffffb010]
+	objA0.position.y.u16 = u16[0xffffb014]
+	objA0.velocity.x = 0
+	objA0.velocity.y = 0
+	objA0.base_state = 0x02
+
+	objA0.update_address = 0x01a1f4
+	fn01a1f4()
+}
+
+
+//# address-hook(0x01a1f4) end(0x01a226)
+function void fn01a1f4()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		base.fn01a1f4()
+		return
+	}
+
+	fn01a292()
+	GoheiStickUpdateRingCollection()
+
+	// Some rendering shenanigans we don't really need another function for
+
+	if (objA0.base_state == 0x02) // Once you release the stick it shouldn't need to check this
+	{
+		if (u8[0xffffb004] & render_flag.FLIP_X)
+			objA0.render_flags |= render_flag.FLIP_X
+		else
+			objA0.render_flags &= ~render_flag.FLIP_X
+	}
+
+	// Still a chance it's on screen when gravity flips so this is always checked
+	objA0.render_flags &= ~render_flag.FLIP_Y
+	if (global.inv_gravity)
+	{
+		objA0.render_flags |= render_flag.FLIP_Y
+	}
+
+	if objA0.animation.sprite == 0
+		playSound(SFX_INSTASHIELD)
+
+	--objA0.animation.timer
+	if (s8(objA0.animation.timer) < 0)
+	{
+		objA0.animation.timer = 1
+		++objA0.animation.sprite
+		objA0.animation.sprite %= 8
+	}
+
+	DrawObject()
+}
+
+//# address-hook(0x01a292) end(0x01a31c)
+function void fn01a292()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		base.fn01a292()
+		return
+	}
+
+	if (objA0.base_state == 0x02)
+	{
+		objA0.position.x.u16 = u16[0xffffb010]
+		objA0.position.y.u16 = u16[0xffffb014]
+
+		if !(control.player1.state & CONTROL_ABC)
+		{
+			objA0.base_state = 0x04
+			u8[0xffffb02f] = 2
+			objA0.countdown_value = 15
+		}
+		else if (u8[0xffffb02f] != 1)
+			UnloadObject()
+	}
+	else if (objA0.base_state == 0x04)
+	{
+		objA0.position.x.u16 += (objA0.render_flags & render_flag.FLIP_X) ? -8 : 8
+
+		--objA0.countdown_value
+		if (objA0.countdown_value < 0)
+		{
+			objA0.base_state = 0x06
+			objA0.countdown_value = 60
+		}
+	}
+	else if (objA0.base_state == 0x06)
+	{
+		--objA0.countdown_value
+		if (objA0.countdown_value < 0)
+		{
+			objA0.base_state = 0x08
+			objA0.countdown_value = 300
+		}
+	}
+	else
+	{
+		D2.u16 = u16[0xffffb000 + 0x10]
+		D3.u16 = u16[0xffffb000 + 0x14]
+		fn01a37a()
+
+		s16 xfromplayer = objA0.position.x.u16 - s16[0xffffb010]
+		s16 yfromplayer = objA0.position.y.u16 - s16[0xffffb014]
+		bool reachedPlayer = (xfromplayer <= 0x08 && xfromplayer >= -0x08) && (yfromplayer <= 0x08 && yfromplayer >= -0x08)
+
+		--objA0.countdown_value
+		if (objA0.render_flags & render_flag.VISIBLE)
+		{
+			objA0.countdown_value = 300
+		}
+
+		if (reachedPlayer) || (objA0.countdown_value < 0) // Unload if close enough to the player, or if too far away
+			UnloadObject()
+	}
+
+	D6.u16 = global.dynamic_objects.size
+	A4 = addressof(global.dynamic_objects.size) + 2		// Resulting address: 0xffffe382
+	if (D6.u16 != 0)
+	{
+		u8[0xfffff66c] += 2
+		if (u8[0xfffff66c] >= D6.u8)
+		{
+			u8[0xfffff66c] = 0
+		}
+
+		D0 = u8[0xfffff66c]
+		D6.u16 -= D0.u16
+		A4 += D0.s16
+		while (D6.u16 != 0)
+		{
+			A1 = 0xffff0000 + u16[A4]
+			A4 += 2
+			D2.u16 = objA1.position.x.u16
+			D3.u16 = objA1.position.y.u16
+			if (objA1.render_flags & render_flag.VISIBLE)
+			{
+				D0.s16 = objA0.position.x.u16 - D2.u16
+				D1.u16 = objA0.position.y.u16 - D3.s16
+				if (D0.s16 >= 0x40 || D1.s16 >= 0x40) || (D0.s16 <= -0x40 || D1.s16 <= -0x40)
+					return
+		
+				fn01a31e()
+			}
+		}
+	}
+
+	u8[A1 + 0x2d] = 0
+	u8[A0 + 0x30] = 0
+	u8[A0 + 0x32] = 0x78
+
+}
+
+function void GoheiStickUpdateRingCollection()
+{
+	// Shortly after getting hit, you can't collect rings
+	if (u8[0xffffb034] >= 90)
+		return
+
+	u16 box.pos.x
+	u16 box.pos.y
+	u16 box.size.x
+	u16 box.size.y
+
+	box.pos.x = objA0.position.x.u16 - 0x20
+	box.pos.y = objA0.position.y.u16 - 0x20
+	box.size.x = objA0.box_size.x
+	box.size.y = objA0.box_size.y
+
+#if STANDALONE
+	if (DEBUG_DYNAMIC_COLLISIONS >= 3)
+		debugDrawRect(box.pos.x, box.pos.y, box.size.x, box.size.y, 0x80ffff00)
+#endif
+
+	// Cycle through list of all rings with x-position in screen area
+	A1 = rings.around.first
+	A2 = rings.around.last
+	A4 = 0xffff0000 + rings.around.first.state
+
+	while (A1 != A2)
+	{
+		// Check if already collected
+		if (u16[A4] == 0)
+		{
+			u16 ring.x = u16[A1 + 0]
+			u16 ring.y = u16[A1 + 2]
+
+			s16 ring.offset = 6
+			s16 ring.size = 12
+
+			u16 px = ring.x - ring.offset
+			u16 py = ring.y - ring.offset
+
+		#if STANDALONE
+			// Consider vertical level wrap
+			if (level.vertical_wrap == 0xff00)
+			{
+				s16 dy = py - box.pos.y
+				if (dy < -s16(level.height.bitmask)/2)
+				{
+					py += (level.height.bitmask + 1)
+				}
+				else if (dy > level.height.bitmask/2)
+				{
+					py -= (level.height.bitmask + 1)
+				}
+			}
+		#endif
+
+		#if STANDALONE
+			if (DEBUG_DYNAMIC_COLLISIONS >= 3)
+				debugDrawRect(px, py, ring.size, ring.size, 0x80ffff00)
+		#endif
+
+			if (checkBoxOverlap(box.pos.x, box.pos.y, box.size.x, box.size.y, px, py, ring.size, ring.size))
+			{
+				if (char.bonus_effect & char.bonus.SHIELD_LIGHTNING)
+				{
+					if (makeDynamicRing())
+						return
+				}
+
+				// Start ring animation, ring counts as collected now
+				u16[A4] = 0x0604
+
+				// Collect this ring
+				CollectLevelRing()
+
+				// This seems to be some kind of table of the currently animated rings
+				A3 = 0xffffef82
+				while (u16[A3] != 0)
+				{
+					A3 += 2
+				}
+				u16[A3] = A4.u16
+
+				++u16[0xffffef80]
+			}
+		}
+
+		A1 += 4
+		A4 += 2
+	}
+}
+
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	if (objA0.update_address == 0x01a1f4)
+	{
+		if (global.characters == CHARACTER_REIMU) // Reimu
+		{
+			Renderer.drawCustomSprite(stringformat("Reimu_Gohei_%d", objA0.animation.sprite), px, py, 0x00, objA0.render_flags + SPRITE_FLAG_PRIO, renderQueue)
+			return true
+		}
+	}
+
+	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+function void ReimuPressedJumpInMidAir()
+{
+	// Remove control lock
+	char.flags &= ~char.flag.CONTROL_LOCK
+	char.double_jump_state = 1	// Always set this flag; needed for Drop Dash
+
+	u32[0xffffcc0a] = 0x01a19c
+}
+
+function void Character.updateJumpMoves()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		base.Character.updateJumpMoves()
+		return
+	}
+
+	u8 input_state     = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
+	u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+	bool isSuperActive = (char.character == CHARACTER_TAILS) ? super.active.tails    : super.active
+
+	if (char.jumping)
+	{
+		// Limit velocity.y
+		s16 max_vy = (char.flags & char.flag.UNDERWATER) ? -0x200 : -0x400
+		if (char.velocity.y < max_vy)
+		{
+			// Limit vertical velocity while not pressing any jump button
+			//  -> This is important to support low jumps by just tapping the button briefly
+			if ((input_state & CONTROL_ABC) == 0)
+			{
+				char.velocity.y = max_vy
+			}
+		}
+		else
+		{
+			if (char.double_jump_state == 0)
+			{
+				#if STANDALONE
+					if (Input.buttonPressed(BUTTON_Y))
+					{
+						if (!isSuperActive && char.invuln.countdown == 0)	// Check invulnerability to prevent spamming of super activate + cancel
+						{
+							if (Character.performSuperTransformation())
+								return
+						}
+					}
+				#endif
+
+				// Check if pressed jump again in mid-air
+				if (input_pressed & CONTROL_ABC)
+				{
+				#if STANDALONE
+					// Check for other things to do instead of the usual reaction to jump button pressed
+					if (onCharacterPressedJumpInMidAir(input_state, input_pressed))
+				#endif
+					{
+						ReimuPressedJumpInMidAir()
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		if (char.spindash == 0)
+		{
+			char.velocity.y = max(char.velocity.y, -0x0fc0)
+		}
+	}
+}
+
+//# address-hook(0x012232) end(0x0122b8)
+function void SonicLandingBubbleBounce()
+{
+	if (global.characters == CHARACTER_REIMU)
+		return
+base.SonicLandingBubbleBounce()
+}
+
+function bool Character.updateSuperPeelout()
+{
+	if (global.characters == CHARACTER_REIMU)
+		return false
+return base.Character.updateSuperPeelout()
+}
+
+//# translated(0x011bde) end(0x011cf0)
+//# translated(0x011d16) end(0x011da4)
+//# translated(0x0151fc) end(0x01530c)
+//# translated(0x015332) end(0x0153c0)
+function bool Character.UpdateSpindash()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		return base.Character.UpdateSpindash()
+	}
+
+#if STANDALONE
+	// Ignore this while charging the Super Peel-Out
+	if (char.spindash == 0x80)
+		return false
+#endif
+
+	u8 input_state   = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
+	u8 input_pressed = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+
+	if (char.spindash == 0)
+	{
+		bool canStartSpindash = (char.state == char.state.COWERING) && (input_pressed & CONTROL_ABC)
+		if (!canStartSpindash)
+		{
+			// Nothing to see here
+			return false
+		}
+
+		// Start spindash
+		char.state = char.state.SPINDASH
+		playSound(SFX_SPINDASH_CHARGE)
+
+		char.spindash = 1
+		char.spindash_charge = 0
+		if (char.drown_countdown >= 12)
+		{
+			// Set state of dust cloud object to 0x02
+			u8[A6 + 0x20] = 0x02
+		}
+	}
+	else
+	{
+		if (input_state & CONTROL_DOWN)
+		{
+			// Update spindash
+			if (char.spindash_charge > 0)
+			{
+				char.spindash_charge -= char.spindash_charge >> 5
+				if (s16(char.spindash_charge) < 0)
+					char.spindash_charge = 0
+			}
+
+			if (input_pressed & CONTROL_ABC)
+			{
+				// Charge up
+				char.state.both = 0x0900		// char.state.SPINDASH, char.state.RUNNING
+				char.spindash_charge = min(char.spindash_charge + 0x200, 0xc00)
+				playSound(SFX_SPINDASH_CHARGE)
+			}
+		#if STANDALONE
+			Input.setControllerRumbleByAddress(A0, 0.0f, 0.2f, 100)
+		#endif
+		}
+		else
+		{
+			releaseSpindash()
+		}
+
+		// Center camera y-offset again
+		centerCameraYOffset()
+	}
+
+	Character.CheckAgainstMoveBorders()
+	Character.UpdateRotationOnGround()
+	partialUpdateCharacterOnGround()
+
+	return true
+}
