@@ -1,0 +1,151 @@
+//# address-hook(0x0512a6) end(0x0512ba)
+function void InitLevelTiles.MGZ2()
+{
+	if (global.characters == CHARACTER_REIMU)
+	{
+		if (allocDynamicObjectStd())
+		{
+			objA1.update_address = 0x06d104
+		}
+	}
+base.InitLevelTiles.MGZ2()
+}
+
+//# address-hook(0x01c96e) end(0x01c9c6)
+function void fn01c96e()
+{
+	if !(global.characters == CHARACTER_REIMU)
+	{
+		base.fn01c96e()
+		return
+	}
+
+	if (camera.position.x.u16 >= 0x3a00)
+	{
+		move_area.left = 0x3a00
+
+		requestLoadingPatterns(0x6d)	// Robotnik's ship, boss explosions, and capsule sprites
+		loadPaletteLine1(0x06d97c)
+
+		if (allocDynamicObjectStd())
+		{
+			// Trigger boss
+			objA1.update_address = 0x086540
+			objA1.position.x.u16 = 0x3d10
+			objA1.position.y.u16 = 0x730
+		}
+
+		camera.update_routine += 2
+	}
+	else
+	{
+		D0 = 0x1000
+		u32[0xffffee18] = D0
+		u32[0xffffee10] = D0
+
+		D0.u16 = 0x6000
+		move_area.right = D0.u16
+		move_area.right.target = D0.u16
+
+		camera.update_routine -= 2
+	}
+}
+
+//# address-hook(0x06d104) end(0x06d138)
+function void fn06d104()
+{
+	if (global.characters != CHARACTER_REIMU)
+	{
+		base.fn06d104()
+		return
+	}
+
+	// Very slightly blend between colors
+	//  -> Doesn't look that great, so it's just for few frames
+	//  -> Maybe this needs some changes to the sunset palettes and timings to work better?
+	u16 offset = objA0.value39
+	for (u8 i = 0; i < 0x60; i += 2)
+	{
+		u32 rgba = u32[0x800000 + (i * 2)]
+    	if (rgba > 0x000f)
+			u16[0xfffffc20 + i] = blendColorsPacked(u16[0xfffffc20 + i], packColorExt(rgba), objA0.countdown_value)
+	}
+
+	++objA0.countdown_value
+}
+
+//# address-hook(0x02dcca)
+function void LevelResults.AdvanceToNextAct()
+{
+	if !((global.characters == CHARACTER_REIMU) && (global.zone_act.apparent == 0x0201))
+	{
+		base.LevelResults.AdvanceToNextAct()
+		if (global.characters == CHARACTER_REIMU) && (global.zone_act.apparent == 0x0201)
+		{
+			if (allocDynamicObjectStd())
+			{
+				objA1.update_address = 0x06d104
+			}
+		}
+		return
+	}
+
+#if STANDALONE
+	if (level.restart)
+	{
+		// Fix "frame-perfect reset" bug, but only for highest level of glitch fix setting
+		if (Game.getSetting(SETTING_FIX_GLITCHES) >= 2)
+		{
+			UnloadObject()
+			return
+		}
+	}
+#endif
+
+	if (objA0.countdown_value != 0)
+	{
+		--objA0.countdown_value
+		return
+	}
+
+	if (u16[A0 + 0x30] != 0)
+	{
+		++objA0.value32
+		return
+	}
+
+	level.wait_for_results = 0
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x06c8f4
+	}
+}
+
+function void copyPaletteDataFromTable(u8 index, u16 ramAddress)
+{
+    base.copyPaletteDataFromTable(index, ramAddress)
+
+    if index != 0x0f
+        return
+
+	A1 = 0x0a872c + index * 8
+	u32 source = u32[A1]					// Something between 0x0a893c and 0x0a9d9c
+	u32 dest   = 0xffff0000 + u16[A1+4]		// Either 0xfffffc00 or 0xfffffc20
+	u16 bytes  = (u16[A1+6] + 1) * 4		// Can be 0x20, 0x60, 0x80 (referring to 16, 48 or all 64 palette entries)
+
+	dest += ramAddress - 0xfc00				// With this, dest can be changed to non-faded palette and/or secondary palette
+	copyMemory(dest, source, bytes)
+
+	u16 numColors = System.loadExternalPaletteData("mgz2_reimu", 0, 0x800000, 0x30)
+
+	if checkpoint.number == 0 || global.act.apparent == 0x00
+		return
+
+	for (u8 i = 16; i < numColors; ++i)
+	{
+		u32 rgba = u32[0x800000 + i * 4]
+		if (rgba > 0x000f)
+	        u16[dest + i * 2] = packColorExt(rgba)
+	}
+}
