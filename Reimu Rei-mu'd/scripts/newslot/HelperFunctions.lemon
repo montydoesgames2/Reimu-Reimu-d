@@ -1,0 +1,677 @@
+// Unedited base game functions that should be changed in order to properly load your character.
+
+function bool MISC.SetCharAsValid(u8 slotnum) //Determine what values are valid
+{
+	bool base = base.MISC.SetCharAsValid(slotnum)
+	//Manual slot checking
+	if slotnum == CHARACTER_REIMU //set this to your char number
+		return true
+	else if base //bases the function, checks for lower slots
+		return true
+	else if (Renderer.hasCustomSprite(stringformat("dataSel_char%d", slotnum))) // Old system. easier for conversion from ESU to MISC
+		return true
+	else //return false if none of these are true
+		return false
+}
+
+function string MISC.GetCharSpriteKey(u8 animationSprite)
+{
+	if global.characters == CHARACTER_REIMU
+	{
+		return stringformat("character_reimu_0x%02x", animationSprite)
+	}
+	else
+		return base.MISC.GetCharSpriteKey(animationSprite)
+}
+
+function bool MISC.SetBluSphereCharAsValid(u8 slotnum) //Determine what values are valid
+{
+	bool base = base.MISC.SetBluSphereCharAsValid(slotnum)
+	//Manual slot checking
+	if slotnum == CHARACTER_REIMU //set this to your char number
+		return true
+	else if base //bases the function, checks for lower slots
+		return true
+	else if (Renderer.hasCustomSprite(stringformat("bump_char%d_0x00", slotnum))) // Old system. easier for conversion from ESU to MISC
+		return true
+	else //return false if none of these are true
+		return false
+}
+
+function u8 getMainCharacter()
+{
+	// example, change to your own slot
+	if (global.characters == CHARACTER_REIMU)
+		return CHARACTER_SONIC //tails & tails doesn't actually work yet, by the way. this is just an example.
+	else
+		return base.getMainCharacter()
+}
+
+function u8 getSecondCharacter()
+{
+	// it's preferred if you don't edit this, just use the MISC function since it also applies for rendering tails in other scenarios
+	if MISC.HasPartner(global.characters + 1)
+		return CHARACTER_TAILS
+	else
+		return base.getSecondCharacter()
+}
+
+// Unedited base game functions that should be changed in order to properly render things. More of these can be found in scripts/standalone/rendering/render_character.lemon at line 397
+
+function string getCharacterContinueIcon(u8 character)
+{
+	// example, change to your own slot
+	// Special handling for active extra character
+	if global.characters == CHARACTER_REIMU
+		return "continue_icon_char4"
+	
+	 // Call the base function
+	return base.getCharacterContinueIcon(character)
+}
+
+function string getCharacterEndPoseSpriteKey(u8 character, bool isSuperActive)
+{
+	if character >= 4
+		return stringformat((isSuperActive) ? "endpose_char%s_super" : "endpose_char%s", character)
+		//load seperate super/base endpose sprites. super is endpose_char4_super, base is endpose_char4
+	return base.getCharacterEndPoseSpriteKey(character, isSuperActive)
+}
+
+function u8 MISC.getEndposePaletteLine(u8 character)
+{
+	if character != 4
+		return base.MISC.getEndposePaletteLine(character)
+	else
+	{
+		if outro.ending_type >= 0 && IsFading == false //allows for super palettes in the ending
+			super.palettefx.state = 0x80
+		return 4 //by default the palette is just the default in-game palette for your character.
+	}
+	//NOTE: counting starts from 0, so 4 ACTUALLY is line 5. you can see palette lines by pressing alt + M with dev mode enabled.
+}
+
+function u64 ESS_getcharname(u8 chars)
+{
+	u8 slotnum = chars - 1
+	if chars >= 5
+		return stringformat("Char%d", slotnum)
+		//default to char slot as the name, as there is a function to accomodate for this
+	else
+		return base.ESS_getcharname(chars)
+}
+
+function u64 ESS_getCharLifeIcon(u64 name)
+{
+	if (name == "Char98") //replace with Char(yourslotnumber)
+		return "ESS_Life_reimu"
+		//replace with return "yourlifeicon"
+	return base.ESS_getCharLifeIcon(name)
+}
+
+function u64 ESS_getCharContIcon(u64 name)
+{
+	if (name == "Char98") //replace with Char(yourslotnumber)
+		return "ESS_Cont_reimu"
+		//replace with return "yourconticon"
+	return base.ESS_getCharContIcon(name)
+}
+
+function void ESS_drawCharacters(s16 px, s16 py, u8 chars, bool no_save)
+{
+	u8 slotnum = chars - 1
+	if (slotnum == CHARACTER_REIMU)
+	{
+		s16 cx = px+45
+		s16 cy = (no_save) ? py+63 : py+137
+		u16 renderQueue = 0x6000
+		
+		s16 posx = cx
+
+		u8 atex = 0x80
+		string key = "charselect_reimu"
+		
+		if (Renderer.hasCustomSprite(key))
+			Renderer.drawCustomSprite(key, cx, cy, atex, 0, renderQueue)
+		return
+	}
+	
+	base.ESS_drawCharacters(px, py, chars, no_save)
+}
+
+function s32 ESS_savecharGetColor(u8 chars)
+{
+	u8 slotnum = chars - 1
+	if (slotnum == CHARACTER_REIMU)
+		return 0x006c90
+	else
+		return base.ESS_savecharGetColor(chars)
+}
+
+function void MISC.loadEndScreenPalette() //if you want, you can change this, but uh.... probably wouldn't recommend it.
+{
+	if (global.characters == CHARACTER_REIMU)
+	{
+		loadCharacterPalette(CHARACTER_REIMU, 0x802240, 0)
+		return
+	}
+	base.MISC.loadEndScreenPalette()
+}
+
+//Continue icons for continue screen (it's for renderhooking, different from regular continues for some reason)
+function string MISC.getContinueIcons(u8 frame) //frames go between 0 and 1
+{
+	if (global.characters == CHARACTER_REIMU)
+	{
+		return "ESS_Life_reimu"
+	}
+}
+
+//Character sprites for their continue animations
+function string MISC.getContinueSprites(u8 frame) //frames go between 0 and 1
+{
+	if (global.characters == CHARACTER_REIMU)
+	{
+		return stringformat("character_reimu_continue_0x%02x", frame)
+	}
+}
+
+function bool MISC.useUniquePartnerContinueAnimation(u8 slot)
+{
+	if (slot != CHARACTER_REIMU)
+		return base.MISC.useUniquePartnerContinueAnimation(slot)
+	return false //you can delete this line if you un-comment the others
+
+	//use this if you want your character to have custom continue animations WHEN THEY HAVE A PARTNER CHARACTER
+	//if (objA0.animation.sprite >= 0x21 && objA0.animation.sprite <= 0x24) // running
+	//	return false
+	//return true
+}
+
+function bool MISC.HaveCharacterTurnAround(u8 slot)
+{
+	if (slot != CHARACTER_REIMU)
+		return base.MISC.HaveCharacterTurnAround(slot)
+
+	if (objA0.animation.sprite >= 0x21 && objA0.animation.sprite <= 0x24)
+		return true
+	return false
+}
+
+// while with a partner
+function string MISC.getPartnerContinueSprites(u8 frame)
+{
+	if (global.characters != CHARACTER_REIMU)
+		return base.MISC.getPartnerContinueSprites(frame)
+	return false //delete this line if you uncomment the partner continue stuff
+
+	//this is for your custom continue sprites IF YOUR CHARACTER HAS A PARTNER. as in, next to tails in the continue screen.
+	//return stringformat("char%d_partner_continue_%d", global.characters, (global.framecounter >> 0x04) % 0x02 ? 0 : 1)
+}
+
+function string MISC.GetCharNameDiscordRPC(u8 character)
+{
+	if (character != CHARACTER_REIMU)
+		return base.MISC.GetCharNameDiscordRPC(character)
+	return MISC.GetCharName(character+1)
+}
+
+//Checking for char names and act select sprites for the act select (Contributed by AtomicRay)
+function string MISC.GetCharName(u8 character)
+{
+	u8 slotnum = (global.game_mode == 0x2c) ? character : (character - 1)
+	if slotnum == CHARACTER_REIMU
+		return "Reimu" //name
+	
+	return base.MISC.GetCharName(character)
+}
+
+function string MISC.GetActSelSprite(u8 character) //renders character in act select
+{
+	u8 slotnum = (global.game_mode == 0x2c) ? character : (character - 1)
+	if slotnum == CHARACTER_REIMU
+		return "charselect_reimu" //sprite key
+		
+	return base.MISC.GetActSelSprite(character)
+}
+
+function string MISC.getActSelectPartnerKey(u8 character) //renders partner character in act select
+{
+	u8 slotnum = (global.game_mode == 0x2c) ? character : (character - 1)
+	if slotnum == CHARACTER_REIMU //replace with your char
+	{
+		return 0 //by default, just render tails.
+	}
+		
+	return base.MISC.getActSelectPartnerKey(character)
+}
+
+function bool MISC.HasPartner(u8 character) //renders partner in act select
+{
+	u8 slotnum = character - 1
+	if slotnum == CHARACTER_REIMU
+		return false //make this true if you want your char to have tails
+	return base.MISC.HasPartner(character)
+}
+
+function void MISC.drawLifeContSprite(s16 px, s16 py, u16 renderQueue, u8 slotnum)
+{
+	if (slotnum == CHARACTER_REIMU) // Character selection AFTER Knuckles & Tails, sets new icon sprites
+	{
+		string key = "dataSel_lifeContinue_reimu" //replace with your sprite
+		Renderer.drawCustomSprite(key, px - 18, py + 0x08, 0x80, SPRITE_FLAG_PRIO, renderQueue)
+	}
+	else
+		base.MISC.drawLifeContSprite(px, py, renderQueue, slotnum)
+}
+
+function void MISC.drawCharSprite(s16 px, s16 py, u16 renderQueue, u8 slotnum)
+{
+	if (slotnum == CHARACTER_REIMU)
+	{
+		string key = "charselect_reimu" //replace with your char sprite
+			
+		//use this to add tails if you want. KEEP IN MIND that if you want tails, you need to -6 from your base char's px.
+		//if MISC.HasPartner(slotnum + 1)
+		//{
+		//	Renderer.drawCustomSprite(key, px-6, py, 0x80, SPRITE_FLAG_PRIO, renderQueue)
+		//	Renderer.drawCustomSprite(getCharacterSelectSpriteKey(CHARACTER_TAILS), px+6, py-18, 0x80, SPRITE_FLAG_PRIO | SPRITE_FLAG_FLIP_X, renderQueue)
+		//}
+		//else
+		//{
+			Renderer.drawCustomSprite(key, px, py, 0x80, SPRITE_FLAG_PRIO, renderQueue)
+		//}
+	}
+	else
+		base.MISC.drawCharSprite(px, py, renderQueue, slotnum)
+}
+
+#if GAMEAPP >= 0x24060180
+function void MISC.drawActSelCharSprite(s16 px, u8 levelselect.characters)
+{
+	u8 slotnum = levelselect.characters - 1
+	
+	if (slotnum == CHARACTER_REIMU)
+	{
+		if MISC.HasPartner(levelselect.characters) == true
+			{
+			Renderer.drawSprite(ActSelect.GetCharacterCombinationSprite(levelselect.characters), px - 8, 156, 0, 0x00 | SPRITE_FLAG_FLIP_X, 0xf004)
+			string key = MISC.getActSelectPartnerKey(levelselect.characters-1)
+			if (!Renderer.hasCustomSprite(key))
+				key = ActSelect.GetCharacterCombinationSprite(2)
+			Renderer.drawSprite(key, px + 8, 154, 0, SPRITE_FLAG_FLIP_X, 0xf004)
+			}
+		else
+			{
+			Renderer.drawSprite(ActSelect.GetCharacterCombinationSprite(levelselect.characters), px, 156, 0, 0x00, 0xf004)
+			}
+	}
+	else
+		base.MISC.drawActSelCharSprite(px, levelselect.characters)
+}
+#endif
+
+// render clear portraits in data select (contributed by nabbup)
+// note: i don't know the extent of which this works so if it doesn't work with your MISC character i don't know what to tell you lol.
+
+function string MISC.getClearPortrait(u8 ending, u8 slotnum)
+{
+	// ending represents if they beat the game with all Chaos/Super emeralds or not.
+	// 0: incomplete, 1: without emeralds, 2: all chaos emeralds, 3: all super emeralds
+	// to utilize the function for an individual character:
+	// if (slotnum != [YOUR SLOT] || ending == 0)
+	//	 return base.MISC.getClearPortrait(ending, slotnum)
+	// the example uses
+	if (slotnum != CHARACTER_REIMU || ending == 0)
+		return base.MISC.getClearPortrait(ending, slotnum)
+	string key
+	// the following keys are just examples, and can really just be whatever,
+	// however center values for the sprites MUST be "Center": "40,120"
+	if (ending == 1)
+		key = "dataSel_savePortrait_reimu"
+	else if (ending == 2)
+		key = "dataSel_savePortrait_superreimu"
+	else if (ending == 3)
+		key = "dataSel_savePortrait_clear_reimu"
+	if (Renderer.hasCustomSprite(key))
+		return key
+	return false
+}
+
+//What zones do you want your character to access?
+function u8 MISC.getAllowedZones(u8 slotnum)
+{
+    // add exceptions for your individual character like this:
+    // if (slotnum == 4)
+    //    return 0x0d
+	// 
+	// for reference:
+	// 0x0d - Sonic zones (includes doomsday)
+	// 0x0c - Tails zones (excludes doomsday)
+	// 0x0b - Knux zones (ends at ssz)
+	//
+    // return base.MISC.getAllowedZones(slotnum)
+    if (slotnum == CHARACTER_REIMU)
+	{
+		return 0x0d
+	}
+	return base.MISC.getAllowedZones(slotnum)
+}
+
+define MISC.dataSelBackup = u16[A1 + 0x34]
+
+//@ Function taken from sonic3air_dev/scripts/menus/dataselect.lemon
+function bool fn00d458()
+{
+	// responsible for switching/limiting zones in the zone order.
+	if Mods.isModActive("Extra Save Slots")
+	{
+		!(System.getGlobalVariableValueByName("ESS_save_entered") == true) //Save selection for ESS. disable this if it's on
+			return base.fn00d458()
+	}
+
+	u8 slotnum = max(s16(u16[A0 + 0x34] - 1), 0)
+    bool completedSlot = objA0.value3b != 0
+    bool controlCheck = (control.pad1.pressed & CONTROL_DOWN) || (control.pad1.pressed & CONTROL_UP)
+    
+	if (control.pad1.pressed & CONTROL_LEFT) || (control.pad1.pressed & CONTROL_RIGHT)
+		u8[A0 + 0x8a] = 0x00 //THAT ACTUALLY WORKED???
+    if (slotnum == CHARACTER_REIMU && completedSlot && controlCheck) //Replace slotnum == 4 with YOUR slot
+    {
+		MISC.dataSelBackup = slotnum
+		u16[A0 + 0x34] = 0 // check all 14 zones (with sonic & tails since they're the default)
+		bool originalScripts = base.fn00d458()
+		u16[A0 + 0x34] = MISC.dataSelBackup+1 // this makes it so characters are not lost
+		if (u16[A0 + 0x36] > MISC.getAllowedZones(slotnum))
+		{
+			if (control.pad1.pressed & CONTROL_UP)
+				u16[A0 + 0x36] = 0
+			else if (control.pad1.pressed & CONTROL_DOWN)
+				u16[A0 + 0x36] = MISC.getAllowedZones(slotnum)
+		}
+		return originalScripts
+	}
+    else 
+    {
+        // Return the Base function
+        return base.fn00d458()
+    }
+}
+
+//# address-hook(0x00c890) end(0x00c95c)
+function void fn00c890()
+{
+    base.fn00c890()
+	// responsible for changing the number in a zone if it doesn't match with the order you want
+	// you can remove the whole function if you don't need to change the zone numbers.
+    for (u8 slot = 0; slot < 8; ++slot)
+    {
+        u32 addressA3 = 0xffffb128 + (slot * 0x4a) // address of slot
+        u32 addressA0 = 0xffffe6ac + (slot * 10) // address of an object?
+        D7.u16 = 0xca20 + (slot * 0x1a) // used for the number i think?
+        // addressA3 and addressA0 are in the place of the actual A3 and A0 so that way no code gets screwed up lol
+        
+        u16 slotnum = max(s16(u16[addressA3 + 0x34] - 1), 0)
+        if (slotnum == CHARACTER_REIMU)
+        {
+            if (s8[addressA0] >= 0)
+            {
+                if !(u8[addressA3 + 0x3a] == u8[addressA3 + 0x37] && u8[addressA3 + 0x3b] != 0)
+                {
+                    // Render "ZONE" label
+                    A1 = 0x00db31
+                    D0.u16 = D7.u16 - 2
+                    fn00d9f4()
+
+                    // Render zone number
+                    D0.u16 = u16[addressA3 + 0x36] * 2 // this can be changed depending on u16[addressA3 + 0x36], which is the currently selected zone minus 1
+                    
+                    // Second digit (10, 20, etc)
+                    D1 = u8[0x00c95e + D0.s16]
+                    if (D1.s8 < 0)
+                    {
+                        D1.u16 = (sprite_attribute.PRIORITY | 0)
+                    }
+                    else
+                    {
+                        D1.u16 += (sprite_attribute.PRIORITY | sprite_attribute.PALETTE.LINE1 | (DataSelect.TextTiles.targetInVRAM >> 5))
+                    }
+                    VDP.writeData16(D1.u16)
+
+                    // First digit (1, 2, etc)
+                    D1 = (sprite_attribute.PRIORITY | sprite_attribute.PALETTE.LINE1 | (DataSelect.TextTiles.targetInVRAM >> 5)) + u8[0x00c95f + D0.s16]
+                    VDP.writeData16(D1.u16)
+                }
+            }
+        }
+    }
+}
+
+function void ESS_switchZoneSelection()
+{
+	u8 slotnum = max(s16(u16[A0 + 0x34] - 1), 0)
+	if (slotnum == CHARACTER_REIMU)
+		D6 = MISC.getAllowedZones(slotnum)
+	base.ESS_switchZoneSelection()
+}
+
+//determines if AI tails should spawn in levels for transitions e.g. mhz (this doesn't occur in knux's mhz or cnz)
+//this can be useful to edit if your character has a custom method of entering the stage, like a custom intro.
+//for most cases this should be true, unless your char uses knuckles' zones.
+function bool SpawnAITails(u8 slotnum)
+{
+	if slotnum == CHARACTER_REIMU //replace with your char number
+		return false //true means tails carries you into cnz and mhz. false means you just fall in.
+	else
+		return base.SpawnAITails(slotnum)
+}
+
+// ADVANCED: Custom Level intro stuff. by default, sets walk into level Intros for CNZ and MHZ if AI Tails intros are disabled
+function void MISC.DoCustomIntroInteractions()
+{
+	if (SpawnAITails(global.characters) || (global.characters != CHARACTER_REIMU) || checkpoint.number != 0) // if Tails carry into zone intros enabled or not MISC in CNZ or MHZ
+	{
+		base.MISC.DoCustomIntroInteractions()
+		return
+	}
+
+	A1 = 0xffffb000
+	A2 = 0xffffb04a
+
+	if (global.zone_act == 0x0300)
+	{
+		// Carnival Night Zone
+		u32[0xffffb172] = 0x044a0c // Walk into level handler object
+	}
+	else if (global.zone_act == 0x0700)
+	{
+		// Mushroom Hill Zone
+		objA1.state = char.state.FALLING_PANIC
+		objA1.flags2a |= char.flag.IN_AIR
+	}
+}
+
+//ADVANCED: Sets initial values before the character's intro is actually played. best used for correcting camera and player positions in order to prevent background corruption.
+//# address-hook(0x01be46) end(0x01bfae)
+function void SetupCharacterAtStartPosition()
+{
+	if ((global.characters != CHARACTER_REIMU) || checkpoint.number != 0 || System.getGlobalVariableValueByName("customZoneSelect.useAlternates") == 1) // if Tails carry into zone intros enabled or not MISC in CNZ or MHZ
+	{
+		base.SetupCharacterAtStartPosition()
+		return
+	}
+
+	base.SetupCharacterAtStartPosition()
+
+	if (global.zone_act == 0x0300) && !SpawnAITails(global.characters)
+	{
+		// Carnival Night Act 1
+		u16[0xffffb010] = 0x08
+		u16[0xffffb014] = 0x6cc // Set pos to ground, or close enough.
+		camera.position.y.u16 = 0x66c //Correct camera positions
+	}
+	else if (global.zone_act == 0x0700) && !SpawnAITails(global.characters)
+	{
+		// Mushroom Hill Act 1
+		if (!isMainCharacter(CHARACTER_KNUCKLES))
+		{
+			u16[0xffffb010] += 0x20
+			u16[0xffffb014] -= 0x100
+			camera.position.y.u16 = u16[0xffffb014] //Correct camera positions
+		}
+	}
+}
+
+//chooses big pilot
+function void MISC.getPilot(u8 slotnum)
+{
+	if slotnum != CHARACTER_REIMU
+	{
+		base.MISC.getPilot(slotnum)
+		return
+	}
+
+	// For MISC by default: Put Tails into the Tornado
+	fn05eb72()
+
+	// sonic in tornado (tails version)
+	//fn05eb72()
+
+	// alt sonic (knuckles version)
+	//fn05eb9e()
+}
+
+//chooses small pilot
+function u8 MISC.getSmallPilot(u8 slotnum)
+{
+	if slotnum != CHARACTER_REIMU
+		return base.MISC.getSmallPilot(slotnum)
+
+	//use numbers to determine which pilot
+	return 1
+	// 1 - tails
+	// 2 - sonic
+	// 3 - sonic (knuckles' version)
+}
+
+//determines your minichar when riding the ending tornado
+function string MISC.getMiniChar(u8 slotnum)
+{
+	if slotnum != CHARACTER_REIMU
+		return base.MISC.getMiniChar(slotnum)
+
+	return "MiniReimu" //replace with your slot
+}
+
+//s3c sound test/level select compatibility
+function bool LevelSelect.innerUpdate()
+{
+	u8 slotnum = levelselect.characters - 1
+	if Mods.isModActive("Sonic 3 Complete Level Select+")
+	{
+		if (slotnum == CHARACTER_REIMU)
+		{
+			Renderer.drawCustomSprite("s3c_reimu", getScreenExtend() + 255, 115, 0x00, 0, 0x2000) //replace with your sprites
+		}
+	}
+	return base.LevelSelect.innerUpdate()
+}
+
+#if EXTRA_CHARACTERS_UNLIMITED
+//this is for the ESU act select names
+function string ExtraChar.Menu.actselect.items.menuitems.getNames(u8 character)
+{
+	u8 slotnum = character - 1
+	if (slotnum == CHARACTER_REIMU)
+		return "Reimu"
+	else
+		return base.ExtraChar.Menu.actselect.items.menuitems.getNames(character)
+}
+
+// This allows your character's icon to be rendered as the "leader" icon for the ESU act select.
+function void ExtraChar.Menu.actselect.items.characterlist.drawleader(s16 px, s16 py, u16 renderQueue)
+{
+	u8 slotnum = actselect.character.backup - 1
+	if (slotnum == CHARACTER_REIMU)
+	{
+		//if (Tails) //use this if using a tails partner
+		//{
+		//	py -= 0x02
+		//	px -= 0x0b
+		//	Renderer.drawSprite(MISC.GetActSelSprite(actselect.character.backup), px, py, 0xb1, 0x00, renderQueue)
+		//	px += 0x0e
+		//	py += 0x02
+		//	Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px, py, 0xa6, 0x00 | SPRITE_FLAG_FLIP_X, 0x60, renderQueue)
+		//}
+		//else //otherwise do this
+		//{
+		
+			//draw the character's sprites
+			py -= 0x02
+			Renderer.drawSprite(MISC.GetActSelSprite(actselect.character.backup), px, py, 0xb1, 0x00, renderQueue)
+			
+			
+		//}
+	}
+	base.ExtraChar.Menu.actselect.items.characterlist.drawleader( px, py, renderQueue)
+}
+#endif
+
+// Best Ending stuff
+function string MISC.getEndLogoSprites(u8 animation) //determines your character's sprite in the end logo on the best ending
+{
+	if (global.characters != CHARACTER_REIMU) // Your character here
+		return base.MISC.getEndLogoSprites(animation)
+	
+	return stringformat("endlogo_reimu_0x%02x", animation) // Replace char4 with your slot
+}
+
+function u8 MISC.EndLogoGetAnimTimings(u8 AnimEnd) //determines your character's frame timings for the end logo sprites.
+{
+	if (global.characters != CHARACTER_REIMU) // Replace with your char
+		return base.MISC.EndLogoGetAnimTimings(AnimEnd)
+		
+	if AnimEnd == false //determines whether or not the character is doing the little victory pose before it fades to black. if false, play the normal animation.
+	{
+		return ((level.framecounter >> 4) % 4)
+		//this is a bit complicated. level.framecounter counts the frames before changing the value, in this case, 4 frames. the number after the % is the amount of frames your character's
+		//endlogo animation has, so it will swap between frames 1-4, with 4 frames between each interval, before looping back to frame 1.
+	}
+	else
+		return (objA0.animation.sprite == 0x03) ? 0x02 : 0x03
+		//this little bit checks for the object's sprite when doing the victory pose in the end logo, of course this means that the animation will only have 2 frames. you could in theory make it more, but that's a ton more complex.
+
+	//.....or you could just delete all of this, and just return 0, if your end logo pose is just 1 standalone frame.
+	//return 0
+}
+
+function u64 Monitor.getIconSpriteKey(u8 type)
+{
+	if (global.characters != CHARACTER_REIMU)
+		return base.Monitor.getIconSpriteKey(type)
+
+
+	if (type == 0)
+		return "monitor_icon_static"
+	else if (type == 0x01)
+		return "icon_reimu" // just replace this with the key for your character's monitor icon
+	else if (type == 0x02)
+		return "monitor_icon_robotnik"
+	else if (type == 0x03)
+		return "monitor_icon_ring"
+	else if (type == 0x04)
+		return "monitor_icon_speedshoes"
+	else if (type == 0x05)
+		return "monitor_icon_fireshield"
+	else if (type == 0x06)
+		return "monitor_icon_lightningshield"
+	else if (type == 0x07)
+		return "monitor_icon_bubbleshield"
+	else if (type == 0x08)
+		return "monitor_icon_invincibility"
+	else if (type == 0x09)
+		return "monitor_icon_super"
+	else if (type == 0x0b)
+		return "monitor_icon_classicshield"
+
+	return 0
+}

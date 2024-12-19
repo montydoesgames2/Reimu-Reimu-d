@@ -1,0 +1,121 @@
+//This act select stuff is pretty bad. basically no way to base these functions, so unless Euka makes the variables global or smth there's not much we can do with it here.
+//so unfortunately, this means that this is basically incompatible with everything act select related! ...yaaaayyyy....
+#if GAMEAPP >= 0x24060180
+function u8 ActSelect.GetNumCharacterCombinations() //unlocks number to full 255 slots
+{
+	u8 numCharacterCombinations = 255
+	if (!Game.isSecretUnlocked(SECRET_KNUX_AND_TAILS))
+		--numCharacterCombinations
+	return numCharacterCombinations
+}
+
+function string ActSelect.GetCharacterCombinationName(u8 index) //calls seperate function for getting name strings for chars over 5 (might need to account for k&t)
+{
+	if levelselect.characters < 5
+		return ActSelect.CHARACTER_COMBINATION_NAME[index]
+	else
+		return MISC.GetCharName(levelselect.characters)
+}
+
+function string ActSelect.GetCharacterCombinationSprite(u8 index) //calls seperate function for getting name strings for chars over 5 (might need to account for k&t)
+{
+	if index < 5
+		return ActSelect.CHARACTER_COMBINATION_SPRITE[index]
+	else
+		return MISC.GetActSelSprite(levelselect.characters)
+}
+
+//Fix "beep" sound playing on highest character selection. this is only called this way during this script, so it's okay to do it like this.
+function void Audio.playAudio(u64 sfxId)
+{
+	if sfxId == 0x5b && levelselect.characters > getHighestValidChar()
+		return
+
+	base.Audio.playAudio(sfxId)
+}
+
+function void ActSelect.DrawMenu(u8 selectedEntry, u8 selectedZone, u8 selectedAct, s16 anchorX)
+{
+	// Title text
+	Renderer.drawText(ActSelect.TITLE_FONT, anchorX, 12, "ACT SELECT", 0xffffffff, 5, 0, 0xf010, false, true)
+	
+	if (selectedEntry == 2) //Edited portion. unlocks selections over 3 and checks for valid chars
+	{
+		bool left = Input.buttonDown(BUTTON_LEFT)
+		bool right = Input.buttonDown(BUTTON_RIGHT)
+		s8 optionChange = (left) ? -1 : (right) ? 1 : 0
+		while !(isValidChar(levelselect.characters))
+			levelselect.characters = clamp(s16(levelselect.characters) + optionChange, 0, getHighestValidChar())
+	}
+	
+	// Character preview
+	{
+		s16 px = max(anchorX - 125, 52)		// Move to the right in 4:3
+		Renderer.drawSprite("charselectionbox", px + 3, 159, 0, 0x00, 0xf002)
+		if levelselect.characters > 4
+			MISC.drawActSelCharSprite(px, levelselect.characters)
+		else
+			Renderer.drawSprite(ActSelect.GetCharacterCombinationSprite(levelselect.characters), px, 156, 0, 0x00, 0xf004)
+	}
+
+	// Render menu texts
+	constant array<s16> TEXT_LINE_Y = { 121, 143, 165, 203 }
+	for (u32 entryIndex = 0; entryIndex < 4; ++entryIndex)
+	{
+		bool isSelected = (entryIndex == selectedEntry)
+		u32 color = isSelected ? 0xffff00ff : 0xffffffe8
+
+		bool canGoLeft = false
+		bool canGoRight = false
+
+		string text
+		if (entryIndex == 0)
+		{
+			text = ActSelect.GetZoneName(selectedZone)
+			canGoLeft = (selectedZone > 0)
+			canGoRight = (selectedZone < ActSelect.GetNumZones() - 1)
+		}
+		else if (entryIndex == 1)
+		{
+			if (ActSelect.GetNumActs(selectedZone) == 1)
+				text = "Single Act"
+			else
+				text = stringformat("Act %d", selectedAct + 1)
+			canGoLeft = (selectedZone > 0 || selectedAct > 0)
+			canGoRight = (selectedZone < ActSelect.GetNumZones() - 1 || selectedAct < ActSelect.GetNumActs(selectedZone) - 1)
+		}
+		else if (entryIndex == 2)
+		{
+			text = ActSelect.GetCharacterCombinationName(levelselect.characters)
+			canGoLeft = (levelselect.characters > 0)
+			canGoRight = ((levelselect.characters < ActSelect.GetNumCharacterCombinations() - 1) && (levelselect.characters != getHighestValidChar())) //edited section, makes the highest possible char the highest valid MES.
+		}
+		else
+		{
+			text = "Back"
+		}
+
+		s16 px = anchorX
+		s16 py = TEXT_LINE_Y[entryIndex]
+
+		s16 arrowAnimOffset = 0
+		if (isSelected)
+		{
+			float seconds = global.framecounter / 60.0f
+			arrowAnimOffset = Math.roundToInt(seconds * 6.0f) % 6
+			arrowAnimOffset = (arrowAnimOffset > 3) ? (6 - arrowAnimOffset) : arrowAnimOffset
+		}
+
+		if (canGoLeft)
+			Renderer.drawText(ActSelect.MENU_FONT, px - 50 - arrowAnimOffset, py, "<", color, 5, 0, 0xf000, false, true)
+		if (canGoRight)
+			Renderer.drawText(ActSelect.MENU_FONT, px + 110 + arrowAnimOffset, py, ">", color, 5, 0, 0xf000, false, true)
+
+		Renderer.drawText(ActSelect.MENU_FONT, px + 29, py, text, color, 5, 0, 0xf000, false, true)
+	}
+	#if CZS_ACTIVE
+		customZoneSelect.ActSelectCZSControl()
+	#endif
+}
+
+#endif
