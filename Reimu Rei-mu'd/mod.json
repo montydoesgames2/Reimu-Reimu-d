@@ -23,14 +23,6 @@
 				{
 					"0x00": "Reimu (Genesis accurate)",
 					"0x01": "Reimu (PC-98 accurate)",
-					"0x03": "Cirno",
-					"0x09": "Sakuya",
-					"0x1b": "Bluemu",
-					"0x1c": "Yellowmu",
-					"0x1d": "Greenmu",
-					"0x1e": "The Reimu Resource",
-					"0x1f": "MEEEDIIC! (RED)",
-					"0x20": "MEEEDIIC! (BLU)",
 					"0x21": "Hardware"
 				}
 			},
