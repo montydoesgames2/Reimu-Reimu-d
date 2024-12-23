@@ -214,7 +214,7 @@ base.TennmechaTwo.playerControl()
 	if (global.characters != CHARACTER_REIMU)
 		return
 
-	TennmechaTwo.playerHitTime = 0
+	Game.setGlobalVariableValueByName("TennmechaTwo.playerHitTime", 0)
 }
 
 function bool Tenna.useFinalBossSuperSonicAnimation()
