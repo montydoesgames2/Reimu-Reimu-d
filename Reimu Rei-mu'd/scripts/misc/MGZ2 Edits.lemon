@@ -1,3 +1,5 @@
+global u8 Reimu.MGZ
+
 //# address-hook(0x0512a6) end(0x0512ba)
 function void InitLevelTiles.MGZ2()
 {
@@ -20,13 +22,16 @@ function void fn06d104()
 		return
 	}
 
+	if (objA0.countdown_value == 0) && (Reimu.MGZ)
+		System.loadExternalPaletteData("sunset_mgzr_1", 0, 0x800000, 0x30)
 	// Fade to Sunset
 	u16 offset = objA0.value39
 	for (u8 i = 0; i < 0x60; i += 2)
 	{
 		u32 rgba = u32[0x800000 + (i * 2)]
-    	if (rgba > 0x000f)
-			u16[0xfffffc20 + i] = blendColorsPacked(u16[0xfffffc20 + i], packColorExt(rgba), objA0.countdown_value)
+		u8 alpha = rgba % 16
+		if (alpha != 0)
+			u16[0xfffffc20 + i] = blendColorsPacked(u16[0xfffffc20 + i], packColorExt(rgba), objA0.countdown_value / 75)
 	}
 
 	++objA0.countdown_value
@@ -36,7 +41,7 @@ function void copyPaletteDataFromTable(u8 index, u16 ramAddress)
 {
     base.copyPaletteDataFromTable(index, ramAddress)
 
-    if index != 0x0f
+    if (index != 0x0f && index != 0x0e)// || (global.characters != CHARACTER_REIMU)
         return
 
 	A1 = 0x0a872c + index * 8
@@ -47,15 +52,16 @@ function void copyPaletteDataFromTable(u8 index, u16 ramAddress)
 	dest += ramAddress - 0xfc00				// With this, dest can be changed to non-faded palette and/or secondary palette
 	copyMemory(dest, source, bytes)
 
-	u16 numColors = System.loadExternalPaletteData("mgz2_reimu", 0, 0x800000, 0x30)
+	u16 numColors = System.loadExternalPaletteData("sunset_mgzr_0", 0, 0x800000, 0x30)
 
-	if checkpoint.number == 0 || global.act.apparent == 0x00
+	if (checkpoint.number == 0 || global.act.apparent == 0x00) && !(Reimu.MGZ)
 		return
 
 	for (u8 i = 16; i < numColors; ++i)
 	{
 		u32 rgba = u32[0x800000 + i * 4]
-		if (rgba > 0x000f)
+		u8 alpha = rgba % 16
+		if (alpha != 0)
 	        u16[dest + i * 2] = packColorExt(rgba)
 	}
 }
@@ -71,12 +77,14 @@ function void fn06c31a()
 	objA0.update_address = 0x06c698
 }
 
+// Boss code courtesy of nabbup
+
 //# address-hook(0x051842) end(0x0518f4)
 function void InitLevelScrolling.MGZ2()
 {
 	base.InitLevelScrolling.MGZ2()
 	if (global.characters == CHARACTER_REIMU)
-		MarioBros.setupMGZArena()
+		Reimu.setupMGZArena()
 }
 
 //# address-hook(0x0511c8) end(0x051278)
@@ -84,10 +92,10 @@ function void fn0511c8()
 {
 	base.fn0511c8()
 	if (global.characters == CHARACTER_REIMU && global.zone_act == 0x0201) // act 2 gets loaded
-		MarioBros.setupMGZArena()
+		Reimu.setupMGZArena()
 }
 
-function void MarioBros.setupMGZArena()
+function void Reimu.setupMGZArena()
 {
 	u8[0xffff87fe] = 0x0d
 	u8[0xffff877f] = 0x81

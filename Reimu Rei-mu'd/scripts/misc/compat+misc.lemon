@@ -98,3 +98,129 @@ function bool Stone.canFightStoneBuggy()
 		return true // Reimu can fight Stone Buggy
 	return base.Stone.canFightStoneBuggy()
 }
+
+// Tenna compat. Big Tenna compat.
+
+//# address-hook(0x010bba) end(0x010c8e)
+function void Character.UpdateNormalState.Sonic()
+{
+base.Character.UpdateNormalState.Sonic()
+	if (global.characters != CHARACTER_REIMU)
+		return
+
+	u32 backupA = A1
+	if (Input.buttonPressed(BUTTON_Y)) && (System.getGlobalVariableValueByName("TennmechaTwoCheckpoint")) && (global.zone == 0x17) && (super.active)
+	{
+		if (allocDynamicObjectStd())
+		{
+			objA1.update_address = 0x20ab10
+			objA1.render_flags = (render_flag.WORLD | render_flag.VISIBLE)
+			objA1.box_size.x = 0x10
+	        objA1.box_size.y = 0x10
+			objA1.position.y.u16 = objA0.position.y.u16
+			objA1.position.x.u16 = objA0.position.x.u16
+			objA1.velocity.y = 0
+			objA1.velocity.x = 0x600
+		}
+	}
+	A1 = backupA
+}
+
+//# address-hook(0x20ab10)
+function void Reimu.YinYang.BaseUpdate()
+{
+	if !(objA0.render_flags & render_flag.VISIBLE)
+		UnloadObject()
+
+	Reimu.YinYang.UpdateObjectCollision()
+	UpdateMovementStraight()
+	DrawObject()
+}
+
+function void Reimu.YinYang.UpdateObjectCollision()
+{
+	u16 numObjects = global.dynamic_objects.size		// Actually it's twice the number of dynamic objects
+	A4 = addressof(global.dynamic_objects.size) + 2		// Resulting address: 0xffffe382
+	while (numObjects != 0)
+	{
+		// Get address of dynamic object
+		A1 = 0xffff0000 + u16[A4]
+		A4 += 2
+
+		// Offset into a list of hitbox sizes (the list looks a bit random)
+		u16 offset = objA1.collision_attributes
+		if (offset != 0)
+		{
+			A2 = 0x00ff62 + (offset & collision_attributes.size) * 2
+			s16 hitbox.x = u8[A2]
+			s16 hitbox.y = u8[A2+1]
+
+			u16 px = objA1.position.x.u16 - hitbox.x
+			u16 py = objA1.position.y.u16 - hitbox.y
+			u16 sx = hitbox.x * 2
+			u16 sy = hitbox.y * 2
+
+			if (checkBoxOverlap(objA0.position.x.u16 - 0x08, objA0.position.y.u16 - 0x08, objA0.box_size.x, objA0.box_size.y, px, py, sx, sy))
+			{
+				// Collision found
+				Reimu.YinYang.OnCollisionWithDynamicObject()
+				return
+			}
+		}
+
+		numObjects -= 2
+	}
+}
+
+function void Reimu.YinYang.OnCollisionWithDynamicObject()
+{
+	D1.u8 = (objA1.collision_attributes & collision_attributes.flags)
+	if (D1.u8 == 0)
+	{
+		// Collision is a boss
+		if (u8[A1 + 0x29] != 0)
+		{
+			u8[A1 + 0x1c] = 0xffffb04a
+			u8[A1 + 0x25] = u8[A1 + 0x28]
+			u8[A1 + 0x28] = 0
+			--u8[A1 + 0x29]
+			if (u8[A1 + 0x29] == 0)
+			{
+				u8[A1 + 0x2a] |= 0x80
+			}
+			UnloadObject()
+		}
+	}
+}
+
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue) //render the hammer
+{
+	u8 flags = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((gfx.plane_update_routine == 0x08 && (global.zone_act.apparent == 0)) ? render_flag.WORLD : SPRITE_FLAG_PRIO)
+	if (objA0.update_address == 0x20ab10) && (global.characters == CHARACTER_REIMU)
+	{
+		SpriteHandle YinYang = Renderer.addSpriteHandle("Reimu_YinYang", px, py, renderQueue)
+		YinYang.setPaletteOffset(0x00)
+		YinYang.setFlags(flags)
+		float rotation = (Game.getSetting(SETTING_SMOOTH_ROTATION)) ? ((level.framecounter * 10) % 360) : (((level.framecounter / 4) % 8) * 45)
+		YinYang.setRotation(rotation)
+		return true
+	}
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+function void TennmechaTwo.playerControl()
+{
+base.TennmechaTwo.playerControl()
+	if (global.characters != CHARACTER_REIMU)
+		return
+
+	TennmechaTwo.playerHitTime = 0
+}
+
+function bool Tenna.useFinalBossSuperSonicAnimation()
+{
+	if (global.characters == CHARACTER_REIMU)
+		return false
+
+	return base.Tenna.useFinalBossSuperSonicAnimation()
+}
