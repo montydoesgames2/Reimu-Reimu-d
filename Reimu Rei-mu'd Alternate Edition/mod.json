@@ -1,0 +1,64 @@
+{
+
+"Metadata":
+    {
+    "Name": "Reimu Rei-mu'd: Alternate Edition",
+    "Author": "Reimu Alternate Team",
+    "Description": "An addon mod for Reimu Rei-mu'd which adds extra palettes and songs, made and suggested by you guys!",
+    "ModVersion": "1.0.0",
+    "GameVersion": "20.03.22.0",
+    "UniqueID": "ReimuRemadeAlternatePalettes"
+	},
+	"OtherMods":
+	{
+	    "ReimuRemadeBaseMod":
+	    {
+	        "DisplayName": "Reimu Rei-mu'd",
+	        "IsRequired": "1",
+	        "Priority": "Lower"
+	    }
+	},
+	"Settings":
+	{
+		"RIEMUTOUHOUREAL":
+		[
+			{
+				"InternalName": "RIEMUALTDISGUISE",
+				"DisplayName": "Palette",
+				"Category": "What you came here for!",
+				"Variable": "ReimuPalette",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0x0c": "Scarlet (by SHADED)",
+					"0x0d": "Popipo (by DolphinCube)",
+					"0x0e": "China (by ScarlyNight)",
+					"0x0f": "Fallen (by AnotherUser007)",
+					"0x10": "Fluff (by parajamas)",
+					"0x11": "Plushified (by plushnoob)",
+					"0x12": "Nursing Home\n(by scarlet_devill)",
+					"0x13": "Another Life (by JC)",
+					"0x14": "Dancer's Love (by Timer)",
+					"0x15": "Spriter's Tool (by Luhke)",
+					"0x16": "Fumbler (by Rookie)",
+					"0x17": "Uhr (by montydoesgames)",
+					"0x18": "Emerald Waters\n(by Bluespeed)",
+					"0x19": "Clubhouse (by Yebby)",
+					"0x1a": "Genesis Accurate (Alt)"
+				}
+			},
+			{
+				"InternalName": "NitoriMode",
+				"DisplayName": "Touhou Lock-On",
+				"Category": "Extras",
+				"Variable": "ReimuNitoriCompat",
+				"DefaultValue": "0x0",
+				"Options":
+				{
+					"0x00": "Off",
+					"0x01": "On",
+				}
+			}
+    	]
+	}
+}
