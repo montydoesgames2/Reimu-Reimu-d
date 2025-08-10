@@ -391,33 +391,28 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 
 	//this is only if you want a custom pilot (not sonic tails or knux) in the big & small variants, mini variants have a whole different thing.
 	// Character sprites for riding the Tornado in the ending
-	if (objA0.update_address == 0x05ebb4 || objA0.update_address == 0x05ed18 || objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
-	{
-		string key = 0
-		if (objA0.update_address == 0x05ebb4 || objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && (global.characters == CHARACTER_REIMU)
-		{
-			key = "tornado_pilot_marisa" //Make this whoever you want
-		}
-		else //if (objA0.update_address == 0x05ed18)
-		{
-			if (objA0.subtype2c == 0) && (global.characters == CHARACTER_REIMU) //same thing is done here
-				key = "tornado_pilot_marisa_small" //make this whoever you want
-			else if objA0.subtype2c != 0
-				key = "tornado_reimu_small"
-		}
-	
-		if !(objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && Renderer.hasCustomSprite(key)
-		{
-			Renderer.drawCustomSprite(key, px, py, ((objA0.subtype2c == 0) ? 0x60 : 0x40), (objA0.render_flags & render_flag.FLIP_X) | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
-			return true
-		}
-		else if Renderer.hasCustomSprite(key)
-		{
-			Renderer.drawCustomSprite(key, px, py - 16, 0x60, (objA0.render_flags & render_flag.FLIP_X) | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue + 2)
-			Renderer.addSpriteMask(px - 11, py - 28, 23, 20, renderQueue + 1, 8000)
-			return false
-		}
-	}
+	//if (objA0.update_address == 0x05ebb4 || objA0.update_address == 0x05ed18) && global.characters >= 4
+	//{
+	//	u64 key = 0
+	//	u8 atex = 0
+	//	u8 character = isMainCharacter(CHARACTER_SONIC) ? CHARACTER_TAILS : isMainCharacter(CHARACTER_TAILS) ? CHARACTER_SONIC : isSecondCharacter(CHARACTER_TAILS) ? CHARACTER_TAILS : CHARACTER_SONIC
+	//	if (objA0.update_address == 0x05ebb4)
+	//	{
+	//		key = "tails_faketornado_pilot" //Make this whoever you want
+	//	}
+	//	else //if (objA0.update_address == 0x05ed18)
+	//	{
+	//		if (objA0.subtype2c == 0) //same thing is done here
+	//			key = "tails_faketornado_pilot_small" //make this whoever you want
+	//	}
+	//
+	//	atex = 0x40 + character * 0x20
+	//	if (Renderer.hasCustomSprite(key))
+	//	{
+	//		Renderer.drawCustomSprite(key, px, py, atex, (objA0.render_flags & render_flag.FLIP_X) | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+	//		return true
+	//	}
+	//}
 
 	// Outro;
 	// - Characters on the Best ending:
@@ -631,6 +626,7 @@ function void SetGlobalCharacters()
 		global.characters = min(global.characters, 254) //change this to 254 so that it supports values over 4. not 255 since knuckles & tails count as slot 3 still
 		
 		MISC.SpawnSpecialPlayer()
+		MISC.SpawnSpecialPlayer2()
 		
 		MISC.setDiscordDetails()
 		
@@ -1165,7 +1161,6 @@ function bool Standalone.onDrawVdpSpriteCompound(s16 px, s16 py, u8 size, u16 in
 //# address-hook(0x05f26c) end(0x05f2dc)
 function void fn05f26c() //add the new character. to my knowledge, no way to base this, so.
 {
-	IsFading = false //reset the check
 	if u8[0xffffe654] || global.characters < 4
 	{
 		base.fn05f26c()
@@ -1309,8 +1304,6 @@ function void fn05ef68()
 	call A2
 }
 
-global bool IsFading
-
 //you probably hate me for doing this, but uh. bite me. :P it looks better, anyway.
 //# address-hook(0x085590) end(0x0855b0)
 //# alias(fn085590) deprecated
@@ -1321,8 +1314,8 @@ function void FadeOutColorUniform()
 	if global.zone_act != 0x0d01 //don't do this if you're not in the ending
 		return
 		
-	IsFading = true
 	super.palettefx.state = 0
+	super.palettefx.timer = 0x80
 }
 
 
@@ -1574,9 +1567,12 @@ function void SaveGameSlot()
 	if levelselect.characters > 4
 	{
 		// Get the data from the sharedmemory
-		MISC.SaveSlots(MISC.GetStringFromChar(levelselect.characters-1), dataselect.slot_selected)
+		if MISC.GetStringFromSlot(dataselect.slot_selected) == ""
+			MISC.SaveSlots(MISC.GetStringFromChar(levelselect.characters-1), dataselect.slot_selected)
+		else
+			MISC.SaveSlots(MISC.GetStringFromSlot(dataselect.slot_selected), dataselect.slot_selected)
 
-		// debugLog(stringformat("saved MISC char %d in slot %d, under data address 0x%06x", levelselect.characters, dataselect.slot_selected, tempValue0))
+		//debugLog(stringformat("saved MISC char %s in slot %d", MISC.GetStringFromSlot(dataselect.slot_selected), dataselect.slot_selected))
 		u8[A1 + 0x02] = 0x30
 	}
 	base.SaveGameSlot()
