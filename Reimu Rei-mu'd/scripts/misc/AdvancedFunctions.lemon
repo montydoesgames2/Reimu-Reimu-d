@@ -18,7 +18,7 @@ function u8 MISC.getEndposePaletteLine(u8 character)
 		return base.MISC.getEndposePaletteLine(character)
 	else
 	{
-		if outro.ending_type >= 0 && IsFading == false //allows for super palettes in the ending
+		if outro.ending_type >= 0 && super.palettefx.timer != 0x80 //allows for super palettes in the ending
 			super.palettefx.state = 0x80
 		return 4 //by default the palette is just the default in-game palette for your character.
 	}
