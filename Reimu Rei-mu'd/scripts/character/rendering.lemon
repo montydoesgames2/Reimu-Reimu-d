@@ -109,6 +109,63 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 		}
 	}
 
+	//small and micro plane
+	//small plane and micro outside
+	//0x05d86a is contemporarily the small tornado flying right and the micro one flying left!
+	if (objA0.update_address == 0x05d86a)
+	{
+		//if flying left use the micro character
+		if (char.render_flags & 0x01) && global.characters > 3
+		{
+			u8 flags = prioFlag ? SPRITE_FLAG_PRIO : 0x00
+			u8 flags2 = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+			u64 key = MISC.getMiniChar(global.characters) //use global.characters when in-game
+
+			if (Renderer.hasCustomSprite(key))
+			{
+			SpriteHandle MiniMicro = Renderer.addSpriteHandle(key, px, py, renderQueue+1) //sprite handles my beloved
+			MiniMicro.setPaletteOffset(0x40)
+			MiniMicro.setFlags(flags2)
+			Renderer.drawCustomSprite(key, px, py, 0, flags, 0) // The pilot and the plane, make it nobody
+			Renderer.addSpriteMask(px - 11, py - 28, 23, 20, renderQueue + 1, 8000)
+			}
+		}
+		else
+		{ //this would be the small tornado, so render normally.
+			return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+		}
+	}
+
+	//this is only if you want a custom pilot (not sonic tails or knux) in the big & small variants, mini variants have a whole different thing.
+	// Character sprites for riding the Tornado in the ending
+	if (objA0.update_address == 0x05ebb4 || objA0.update_address == 0x05ed18 || objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		string key = 0
+		if (objA0.update_address == 0x05ebb4 || objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && (global.characters == CHARACTER_REIMU)
+		{
+			key = "tornado_pilot_marisa" //Make this whoever you want
+		}
+		else //if (objA0.update_address == 0x05ed18)
+		{
+			if (objA0.subtype2c == 0) && (global.characters == CHARACTER_REIMU) //same thing is done here
+				key = "tornado_pilot_marisa_small" //make this whoever you want
+			else if objA0.subtype2c != 0
+				key = "tornado_reimu_small"
+		}
+	
+		if !(objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && Renderer.hasCustomSprite(key)
+		{
+			Renderer.drawCustomSprite(key, px, py, ((objA0.subtype2c == 0) ? 0x60 : 0x40), (objA0.render_flags & render_flag.FLIP_X) | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+			return true
+		}
+		else if Renderer.hasCustomSprite(key)
+		{
+			Renderer.drawCustomSprite(key, px, py - 16, 0x60, (objA0.render_flags & render_flag.FLIP_X) | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue + 2)
+			Renderer.addSpriteMask(px - 11, py - 28, 23, 20, renderQueue + 1, 8000)
+			return false
+		}
+	}
+
 	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
 }
 
