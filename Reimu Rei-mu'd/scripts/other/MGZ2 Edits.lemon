@@ -1,0 +1,223 @@
+global u8 Reimu.MGZ
+
+//# address-hook(0x0512a6) end(0x0512ba)
+function void InitLevelTiles.MGZ2()
+{
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		if (allocDynamicObjectStd())
+		{
+			objA1.update_address = 0x06d104
+		}
+	}
+base.InitLevelTiles.MGZ2()
+}
+
+//# address-hook(0x06d104) end(0x06d138)
+function void fn06d104()
+{
+	if !(global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		base.fn06d104()
+		return
+	}
+
+	if (objA0.countdown_value == 0) && (Reimu.MGZ)
+		System.loadExternalPaletteData("sunset_mgzr_1", 0, 0x800000, 0x30)
+	else if (objA0.countdown_value == 0)
+		System.loadExternalPaletteData("sunset_mgzr_0", 0, 0x800000, 0x30)
+
+	// Fade to Sunset
+	u16 offset = objA0.value39
+	for (u8 i = 0x00; i < 0x60; i += 2)
+	{
+		u32 rgba = u32[0x800000 + (i * 2)]
+		u8 alpha = rgba % 16
+		if (alpha != 0)
+			u16[0xfffffc20 + i] = blendColorsPacked(u16[0xfffffc20 + i], packColorExt(rgba), objA0.countdown_value / 75)
+	}
+
+	++objA0.countdown_value
+}
+
+function void copyPaletteDataFromTable(u8 index, u16 ramAddress)
+{
+    base.copyPaletteDataFromTable(index, ramAddress)
+
+    if (index != 0x0f && index != 0x0e) || (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
+        return
+
+	A1 = 0x0a872c + index * 8
+	u32 source = u32[A1]					// Something between 0x0a893c and 0x0a9d9c
+	u32 dest   = 0xffff0000 + u16[A1+4]		// Either 0xfffffc00 or 0xfffffc20
+	u16 bytes  = (u16[A1+6] + 1) * 4		// Can be 0x20, 0x60, 0x80 (referring to 16, 48 or all 64 palette entries)
+
+	dest += ramAddress - 0xfc00				// With this, dest can be changed to non-faded palette and/or secondary palette
+	copyMemory(dest, source, bytes)
+
+	u16 numColors = System.loadExternalPaletteData("sunset_mgzr_0", 0, 0x800000, 0x30)
+
+	if (checkpoint.number == 0 || global.act.apparent == 0x00) && !(Reimu.MGZ)
+		return
+
+	for (u8 i = 16; i < numColors; ++i)
+	{
+		u32 rgba = u32[0x800000 + i * 4]
+		u8 alpha = rgba % 16
+		if (alpha != 0)
+	        u16[dest + i * 2] = packColorExt(rgba)
+	}
+}
+
+//# address-hook(0x06c31a) end(0x06c32c)
+function void fn06c31a()
+{
+	if !(global.characters == CHARACTER_REIMU)
+	{
+		base.fn06c31a()
+		return
+	}
+	objA0.update_address = 0x06c698
+}
+
+// Boss code courtesy of nabbup
+
+//# address-hook(0x051842) end(0x0518f4)
+function void InitLevelScrolling.MGZ2()
+{
+	base.InitLevelScrolling.MGZ2()
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+		Reimu.setupMGZArena()
+}
+
+//# address-hook(0x0511c8) end(0x051278)
+function void fn0511c8()
+{
+	base.fn0511c8()
+	if ((global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS) && global.zone_act == 0x0201) // act 2 gets loaded
+		Reimu.setupMGZArena()
+}
+
+function void Reimu.setupMGZArena()
+{
+	u8[0xffff87fe] = 0x0d
+	u8[0xffff877f] = 0x81
+	u8[0xffff87ff] = 0x83
+	u8[0xffff8780] = 0x45
+	u8[0xffff8800] = 0x4a
+	u8[0xffff8781] = 0x45
+	u8[0xffff8801] = 0x4a
+	u8[0xffff8782] = 0x45
+	u8[0xffff8802] = 0x4a
+	u8[0xffff8783] = 0x45
+	u8[0xffff8803] = 0x4a
+	u8[0xffff8784] = 0x7b
+	u8[0xffff8804] = 0xb2
+	u8[0xffff8806] = 0xc6
+	u8[0xffff8807] = 0x01
+}
+
+//# address-hook(0x06c698) end(0x06c6ee)
+function void fn06c698()
+{
+	if !(global.characters == CHARACTER_REIMU)
+	{
+		base.fn06c698()
+		return
+	}
+	// Use main boss music
+	objA0.value26 = MUSIC_MAINBOSS
+	StartBossFight()
+
+	objA0.update_address = 0x06c6f4
+	objA0.countdown_callback = 0x06c6fa
+
+	Kosinski.addToDMAQueue(0x36b340, 0x67e0)		// Boss sprites
+
+	Kosinski.addToDMAQueue(0x36d572, 0x8bc0)		// Falling debris sprites
+
+	requestLoadingPatterns(0x6d)		// Robotnik's ship, boss explosions, and capsule sprites
+	loadPaletteLine1(0x06d97c)
+
+	level.bossarea.left -= getScreenExtend()
+	level.bossarea.right += getScreenExtend()
+}
+
+//# address-hook(0x06c6f4) end(0x06c6f4)
+function void fn06c6f4()
+{
+	base.fn06c6f4()
+	if !(global.characters == CHARACTER_REIMU)
+		return
+	if (objA0.countdown_value < 0)
+		objA0.update_address = objA0.countdown_callback
+}
+
+//# address-hook(0x06c8b4) end(0x06c8ee)
+function void fn06c8b4()
+{
+	if !(global.characters == CHARACTER_REIMU)
+	{
+		base.fn06c8b4()
+		return
+	}
+	objA0.update_address = 0x06c8f4
+	level.wait_for_results = 0xff
+	level.boss_encounter = 0
+
+	if (allocDynamicObjectStd())
+	{
+		// Spawn capsule
+		objA1.update_address = 0x086540
+		objA1.position.x.u16 = 0x3ee8
+		objA1.position.y.u16 = 0x730
+	}
+
+	screenmover_target.right = 0x3e48 + getScreenExtend()
+
+	// "spawnSimpleChildObjects(0x084b00)" replaced by:
+	spawnSimpleChildObjects(0x084a48, 1)		// Screen mover for the right border
+}
+
+//# address-hook(0x06c862) end(0x06c888)
+function void fn06c862()
+{
+	base.fn06c862()
+	if !(global.characters == CHARACTER_REIMU)
+		return
+	objA0.position.y.u16 = 0x680
+}
+
+//# address-hook(0x06d4dc) end(0x06d512)
+function void fn06d4dc()
+{
+	if !(global.characters == CHARACTER_REIMU)
+	{
+		base.fn06d4dc()
+		return
+	}
+	// Determine movement from the ground up
+	GetRandomNumber()
+	D0.u16 &= 0x7f
+	D1.u16 = (D0.u16 & 0x01) + 4
+	D2.u16 = u16[0xfffffa82] >> 1
+	objA0.render_flags |= render_flag.FLIP_X
+	D3.u8 = u8[0x06d516 + D2.u16]
+	if (D3.u8 != 0)
+	{
+		D0.s16 = -D0.s16
+		objA0.render_flags &= ~render_flag.FLIP_X
+	}
+	D1.u8 += D3.u8
+	D3.u16 = 0x752
+
+	// D0.s16 is a positional offset here, between -0x80 and 0x7f
+	// D1.u16 determines how he moves:
+	//  - 0x04 = Going straight up, looking right
+	//  - 0x05 = Going diagonally from lower right to upper left, looking right
+	//  - 0x06 = Going straight up, looking left
+	//  - 0x07 = Going diagonally from lower left to upper right, looking left
+
+	A2 = 0xfffffa8a
+	fn06d45e()
+}

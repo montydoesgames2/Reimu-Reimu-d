@@ -1,0 +1,432 @@
+// -- HCZ2 Knuckles Cutscene removal -- \\
+// By this point Sonic would be in MGZ2
+
+//# address-hook(0x062112) end(0x06211e)
+function void fn062112()
+{
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		UnloadObject()
+		return
+	}
+base.fn062112()
+}
+
+//# address-hook(0x050e9c) end(0x050eee)
+//# alias(UpdateLevelScrolling.HCZ2) deprecated
+function void InitLevelScrolling.HCZ2()
+{
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+		level.trigger08 = 0xff
+base.InitLevelScrolling.HCZ2()
+}
+
+
+// -- MHZ Knuckles Cutscene removal -- \\
+
+//# address-hook(0x062ca4) end(0x062ccc)
+function void fn062ca4()
+{
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		UnloadObject()
+		return
+	}
+base.fn062ca4()
+}
+
+//# address-hook(0x0630e0) end(0x063124)
+function void fn0630e0()
+{
+	if !(global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		base.fn0630e0()
+		return
+	}
+
+	// "spawnChildObjects(0x0665bc)" replaced by:
+	spawnChildObject(0x0632ca, 0x00, -8, 0)
+
+	Object.TriggerUnloading()
+}
+
+//# address-hook(0x021818) end(0x021936)
+function void fn021818()
+{
+	if !(global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS) || (global.zone != 0x07)
+	{
+		base.fn021818()
+		return
+	}
+
+	fn021568() // Reimu goes through Knuckles' short MHZ2 section, so we need to set all the Knuckles-only walls to be breakable like normal
+}
+
+// -- Eggrobos -- \\
+
+//# address-hook(0x067aea) end(0x067b12)
+function void fn067aea()
+{
+	if !(global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	{
+		base.fn067aea()
+		return
+	}
+
+	setupObjectAttributesFull(0x06812e)
+
+	fn069b2e()
+
+	u32[A0 + 0x30] = 0x0681cc
+	A1 = 0xffff0000 + u16[A0 + 0x46]
+	u16[A0 + 0x44] = u16[A1 + 0x46]
+
+	if (global.zone == 0x02) || ((global.zone <= 0x08) && (global.zone >= 0x04)) // MGZ, ICZ, LBZ, MHZ, FBZ and SOZ
+		fn067b14()
+}
+
+
+
+// -- HPZ - This is a big one. -- \\
+
+//# address-hook(0x063d1a) end(0x063dd2)
+function void fn063d1a()
+{
+	A1 = 0x063cec
+	if (InitBoss(0x063d2e))
+		return
+
+	StartBossFight()
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = addressof(CheckForBossStart)
+		objA1.countdown_callback = 0x063dd4
+		u16[A1 + 0x2e] = 0x78
+		u8[A1 + 0x27] = u8[A0 + 0x27]
+	}
+
+	objA0.update_address = 0x063de0
+	objA0.mapping_offset = 0x14a8d6
+	objA0.sprite_attributes = (sprite_attribute.PALETTE.LINE1 | 0x04da)
+	objA0.sprite_priority = 0x0100
+	objA0.box_size.x = 0x18
+	objA0.box_size.y = 0x18
+	objA0.hitbox_extends.x = char.hitbox.x.UPRIGHT
+	objA0.hitbox_extends.y = char.hitbox.y.UPRIGHT
+	objA0.render_flags = (render_flag.WORLD | render_flag.FLIP_X)
+	objA0.base_state = 0x16
+	objA0.position.x.u16 -= 0x10
+	boss.remaining_hits = 1
+	u32[A0 + 0x30] = 0x066771		// Boss Knuckles fighting pose animation data
+	u16[A0 + 0x44] = 0
+	call 0x06429e
+
+	if (allocDynamicObjectStd()) // Sonic
+	{
+		objA1.update_address = 0x2f7472
+		objA1.position.x.u16 = objA0.position.x.u16 - 0x10
+		objA1.position.y.u16 = objA0.position.y.u16
+		objA1.countdown_callback = 120
+	}
+
+	if (global.characters != CHARACTER_REIMU_TAILS)
+	{
+		u32[0xffffb04a] = 0x01365c
+		u16[0xffffb04a + 0x10] = objA0.position.x.u16 - 0x20
+		u16[0xffffb04a + 0x14] = objA0.position.y.u16 + 4
+	}
+	player2.control_override = 0xff
+
+	// Copies palette colors 0x10 .. 0x1f from primary to secondary (underwater) palette
+	copyMemory(0xfffffca0, 0xfffffc20, 0x20)
+
+	CutsceneKnuckles.loadPalette()
+
+#if STANDALONE
+	// Change palette to fit
+	//u16[0xfffffc24] = 0x064e
+	//u16[0xfffffc26] = 0x020c
+	//u16[0xfffffc28] = 0x0206
+	//u16[0xfffffc2a] = 0x0080
+	//u16[0xfffffc2c] = 0x000e
+	//u16[0xfffffc2e] = 0x0008
+#endif
+
+	u16[0xfffffc2c] = 0x88
+
+	level.bossarea.left -= getScreenExtend()
+	level.bossarea.right += getScreenExtend() + 0x30
+	player1.control_override = 0xff
+	control.player1 = 0x0808		// CONTROL_RIGHT, CONTROL_RIGHT
+	if (global.characters == CHARACTER_REIMU_TAILS)
+		control.tails.state = 0x0808		// CONTROL_RIGHT, CONTROL_RIGHT
+}
+
+// Cutscene Sonic object
+
+//# address-hook(0x2f7472) end(0x2f7476)
+function void fn2f7472()
+{
+	loadReimuCutsceneSonicCharacterPalette(CHARACTER_SONIC, 0x8020c0, 0)
+	loadReimuCutsceneSonicCharacterPalette(CHARACTER_SONIC, 0x802240, 0)
+	objA0.mapping_offset = 0x146620
+	objA0.sprite_attributes = (Char.Player1.targetInVRAM >> 5)
+	objA0.sprite_priority = 0x100
+	objA0.animation.sprite = 0xba
+	objA0.box_size.x = 0x18
+	objA0.box_size.y = 0x18
+	objA0.base_state = 0x01
+	objA0.render_flags = render_flag.WORLD
+	u16[A0 + 0x40] = 0x08
+	objA0.update_address = 0x2f7478
+}
+
+//# address-hook(0x2f7478) end(0x2f747a)
+function void fn2f7478()
+{
+	call 0x2f747a + (objA0.base_state * 4)
+	debugLog(0x2f747a + (objA0.base_state * 4))
+	UpdateSonicSpritePatterns()
+	DrawObject()
+
+	if (objA0.base_state < 3)
+	{
+		if (u16[0xffffb010] >= 0x1180)
+		{
+			control.player1 = 0
+			player1.camera_lock = 1
+			u8[0xffffb02e] = (control_flag.DISABLE_INTERACTION | control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+			u8[0xffffb022] = 0xba
+			if (global.characters == CHARACTER_REIMU_TAILS) && (objA0.base_state < 2)
+			{
+				control.tails.state = 0
+				u8[0xffffb04a + 0x2e] = (control_flag.DISABLE_INTERACTION | control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+				u8[0xffffb04a + 0x20] = char.state.STANDING
+				u8[0xffffb04a + 0x22] = 0xad
+			}
+		}
+		else
+		{
+			u16[0xffffb01c] = min(u16[0xffffb01c], 0x300)
+			u16[0xffffb04a + 0x1c] = min(u16[0xffffb04a + 0x1c], 0x300)
+		}
+	}
+
+}
+
+//# address-hook(0x2f747e) end(0x2f7481)
+function void fn2f747e()
+{
+	if objA0.countdown_callback == 0
+	{
+		objA0.base_state = 0x02
+		objA0.animation.sprite = 0x07
+	}
+	else
+		--objA0.countdown_callback
+}
+
+//# address-hook(0x2f7482) end(0x2f7485)
+function void fn2f7484()
+{
+	D0.u16 = objA0.velocity.x + 0x10
+	if (D0.u16 < 0x0400)
+	{
+		objA0.velocity.x = D0.u16
+	}
+
+	if objA0.velocity.x >= 0x30
+		objA0.countdown_callback += (objA0.velocity.x / 0x10)
+	else
+		objA0.countdown_callback += 0x40 // Stop sliding idiot
+
+	if (objA0.countdown_callback >= 0xa0)
+	{
+		objA0.animation.sprite = objA0.value3b
+		objA0.animation.sprite %= 8
+		objA0.animation.sprite += 1
+		++objA0.value3b
+		objA0.countdown_callback = 0
+	}
+
+	UpdateMovementStraightSimple()
+	if (global.characters == CHARACTER_REIMU_TAILS) && (u8[0xffffb04a + 0x2e] == (control_flag.DISABLE_INTERACTION | control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE))
+	{
+		u8[0xffffb04a + 0x2e] = 0
+		u16[0xffffb04a + 0x1c] = 0
+	}
+	control.tails.state = 0x0808
+
+	D0.u16 = camera.position.x.u16 + getScreenWidth() + 0x40
+	if (u16[0xffffb04a + 0x10] > D0.u16) || (global.characters == CHARACTER_REIMU_TAILS) // When Tails leaves
+	{
+		objA0.position.x.u16 = 0x1595
+		objA0.position.y.u16 = 0x03ac
+		objA0.animation.sprite = 0xc4
+		objA0.velocity.x = 0
+		objA0.base_state = 0x03
+	}
+}
+
+//# address-hook(0x2f7486) end(0x2f7489)
+function void fn2f7486()
+{
+	if !(player2.control_override)
+		player2.control_override = 0xff
+
+	u16[0xffffb04a + 0x10] = objA0.position.x.u16 - 0x18 // Stand to the left of Sonic
+	u16[0xffffb04a + 0x14] = objA0.position.y.u16 + 4
+
+	tails.respawn_counter = 300 // Doesnt matter what this is just dont respawn
+	u8[0xffffb04a + 0x2e] = (control_flag.DISABLE_INTERACTION | control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+	u8[0xffffb04a + 0x22] = 0xb0 // Tails looking up
+	u8[0xffffb04a + 0x20] = char.state.STANDING
+
+	if (u8[0xfffffab8] & 0x02)
+	{
+		u8[0xffffb04a + 0x2e] = 0
+		objA0.base_state = 0x04
+		objA0.animation.sprite = 0x07
+	}
+	else if (u16[0xffffb010] <= 0x1200) && (player1.control_override)
+	{
+		player1.control_override = 0
+		u8[0xffffb02e] = ~(control_flag.DISABLE_INTERACTION | control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+		player1.camera_lock = 0
+		u8[0xffffb02e] = 0
+		u16[0xffffb01c] = 0
+	}
+}
+
+//# address-hook(0x2f748a) end(0x2f748d)
+function void fn2f748a()
+{
+	D0.u16 = objA0.velocity.x + 0x10
+	if (D0.u16 < 0x300)
+	{
+		objA0.velocity.x = D0.u16
+	}
+
+	if objA0.velocity.x >= 0x30
+		objA0.countdown_callback += (objA0.velocity.x / 0x10)
+	else
+		objA0.countdown_callback += 0x40 // Stop sliding idiot
+
+	if (objA0.countdown_callback >= 0xa0)
+	{
+		objA0.animation.sprite = objA0.value3b
+		objA0.animation.sprite %= 8
+		objA0.animation.sprite += 1
+		++objA0.value3b
+		objA0.countdown_callback = 0
+	}
+
+	UpdateMovementStraightSimple()
+	control.tails.state = 0x0808
+
+	if (objA0.position.x.u16 >= 0x17e0 - getScreenExtend())
+		UnloadObject()
+}
+
+// Special palette loading for Sonic
+function void loadReimuCutsceneSonicCharacterPalette(u8 character, u32 targetAddress, u8 paletteVariant)
+{
+	// Palette variants:
+	//  - 0 = Normal character palette
+	//  - 1 = Underwater character palette for AIZ
+	//  - 2 = Underwater character palette for ICZ
+	//  - 3 = Underwater character palette for HCZ
+	//  - 4 = Underwater character palette for CNZ and LBZ
+
+	// Only Knuckles makes use of all four underwater palette variants,
+	// the other characters have only two actually different underwater palettes:
+	//     - AIZ and ICZ are identical for S/T
+	//     - HCZ, CNZ, LBZ are identical for S/T
+	// In all cases, CNZ and LBZ share the same underwater character palettes.
+	// Also, there's never differences between the two acts of a zone.
+
+	// Load original character palette from ROM
+	u32 sourceAddress
+	if (paletteVariant == 0)
+	{
+		// Normal palette variant
+		sourceAddress = (character != CHARACTER_KNUCKLES) ? 0x0a8a3c : 0x0a8afc
+		copyMemory(targetAddress, sourceAddress, 0x20)
+	}
+	else
+	{
+		// Underwater palette variant
+		if (paletteVariant <= 2)
+		{
+			sourceAddress = 0x0a8c9c
+		}
+		else
+		{
+			sourceAddress = 0x0a8e5c
+		}
+		copyMemory(targetAddress, sourceAddress, 0x20)
+
+		if (character == CHARACTER_KNUCKLES)
+		{
+			// Copying in Knuckles' colors into underwater palette; these are in fact mostly different:
+			//  - paletteVariant == 1  -> AIZ:		0x0a6a, 0x0a2a, 0x0624
+			//  - paletteVariant == 2  -> ICZ:		0x0a4c, 0x0a28, 0x0428
+			//  - paletteVariant == 3  -> HCZ:		0x0e2a, 0x0c0a, 0x0a06
+			//  - paletteVariant == 4  -> CNZ/LBZ:	0x064c, 0x0628, 0x0624
+			if (paletteVariant == 1)
+			{
+				A1 = 0x007a4a
+			}
+			else if (paletteVariant == 2)
+			{
+				A1 = 0x007a4a + 30
+			}
+			else if (paletteVariant == 3)
+			{
+				A1 = 0x007a4a + 6
+			}
+			else
+			{
+				A1 = 0x007a4a + 18
+			}
+			copyMemory(targetAddress + 0x04, A1, 6)
+		}
+	}
+
+	// Allow for loading modded palettes
+	if (EXTENDED_CHARACTER_PALETTES)
+	{
+		u16 numColors = System.loadExternalPaletteData(getCharacterPaletteKey(CHARACTER_SONIC), paletteVariant, 0x800000, 0x20)
+		for (u8 i = 0; i < numColors; ++i)
+		{
+			u32 rgba = u32[0x800000 + i * 4]
+			u16[targetAddress + i * 2] = packColorExt(rgba)
+		}
+
+		if (numColors < 0x20)
+		{
+			// First 16 colors got written in any case
+			numColors = max(numColors, 0x10)
+			zeroMemory(targetAddress + numColors * 2, 0x40 - numColors * 2)
+		}
+	}
+}
+
+// Rendering for Sonic, if a skin mod exists.
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	if (objA0.update_address == 0x2f7478)
+	{
+
+		string key = stringformat(stringformat("%s_0x%02x", getCharacterSpriteKey(CHARACTER_SONIC)), char.animation.sprite)
+
+		if (!Renderer.hasCustomSprite(key)) // No skin mod for this sprite, default to base game
+			key = Renderer.setupCustomCharacterSprite(0x100000, 0x148182, 0x146620, char.animation.sprite, 0x00)
+
+		SpriteHandle Sonic = Renderer.addSpriteHandle(key, px, py, renderQueue) // Rendering
+			Sonic.setPaletteOffset(0xa0) // Use the palette that we loaded
+		return true
+	}
+return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
