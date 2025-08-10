@@ -54,7 +54,7 @@
 					"0x1e": "The Reimu Resource",
 					"0x1f": "Ze hurter",
 					"0x20": "Ze healer",
-					"0x21": "Hat-wearing Child"
+					"0x21": "Hardware"
 				}
 			},
 			{
@@ -87,4 +87,5 @@
 			}
         ]
 	}
+
 }
