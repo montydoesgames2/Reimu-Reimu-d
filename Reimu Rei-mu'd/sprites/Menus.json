@@ -6,6 +6,7 @@
 	"charselect_reimu":  { "File": "ESS.png", "Rect": "16,1,32,40", "Center": "16,40" },
 	"dataSel_lifeContinue_reimu":  { "File": "dataselicons.png", "Rect": "0,4,26,45", "Center": "0,0" },
 	"dataSel_charreimu":  { "File": "ESS.png", "Rect": "16,1,32,40", "Center": "16,40" },
+	"actselect_reimu":  { "File": "ESS.png", "Rect": "16,1,32,40", "Center": "16,20" },
 
 	"dataSel_savePortrait_reimu":  { "File": "SavePortraits.png", "Rect": "0,0,80,56", "Center": "40,120" },
 	"dataSel_savePortrait_superreimu":  { "File": "SavePortraits.png", "Rect": "0,56,80,56", "Center": "40,120" },
