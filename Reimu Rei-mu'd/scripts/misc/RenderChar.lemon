@@ -6,7 +6,7 @@
 
 function void MISC.UpdateAnimation(u8 character)
 {
-	if character != CHARACTER_CUSTOM
+	if (character != CHARACTER_REIMU) && (character != CHARACTER_REIMU_TAILS)
 	{
 		base.MISC.UpdateAnimation(character)
 		return
@@ -125,7 +125,7 @@ function bool Standalone.drawCharacterSprite(u8 character, u8 variant, s16 px, s
 //@ Original function taken from sonic3air_dev/scripts/standalone/rendering/render_character.lemon
 function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s16 px, s16 py, bool asSmallGhost)
 {
-	if (MISCchar != CHARACTER_CUSTOM)
+	if (MISCchar != CHARACTER_REIMU) && (MISCchar != CHARACTER_REIMU_TAILS)
 	{
 		return base.MISC.drawCharacterSprite(character, MISCchar, variant, px, py, asSmallGhost)
 	}
