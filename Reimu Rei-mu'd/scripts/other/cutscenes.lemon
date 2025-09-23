@@ -168,8 +168,7 @@ function void fn063d1a()
 //# address-hook(0x2f7472) end(0x2f7476)
 function void fn2f7472()
 {
-	loadReimuCutsceneSonicCharacterPalette(CHARACTER_SONIC, 0x8020c0, 0)
-	loadReimuCutsceneSonicCharacterPalette(CHARACTER_SONIC, 0x802240, 0)
+	loadReimuCutsceneSonicCharacterPalette()
 	objA0.mapping_offset = 0x146620
 	objA0.sprite_attributes = (Char.Player1.targetInVRAM >> 5)
 	objA0.sprite_priority = 0x100
@@ -330,86 +329,13 @@ function void fn2f748a()
 }
 
 // Special palette loading for Sonic
-function void loadReimuCutsceneSonicCharacterPalette(u8 character, u32 targetAddress, u8 paletteVariant)
+function void loadReimuCutsceneSonicCharacterPalette()
 {
-	// Palette variants:
-	//  - 0 = Normal character palette
-	//  - 1 = Underwater character palette for AIZ
-	//  - 2 = Underwater character palette for ICZ
-	//  - 3 = Underwater character palette for HCZ
-	//  - 4 = Underwater character palette for CNZ and LBZ
-
-	// Only Knuckles makes use of all four underwater palette variants,
-	// the other characters have only two actually different underwater palettes:
-	//     - AIZ and ICZ are identical for S/T
-	//     - HCZ, CNZ, LBZ are identical for S/T
-	// In all cases, CNZ and LBZ share the same underwater character palettes.
-	// Also, there's never differences between the two acts of a zone.
-
-	// Load original character palette from ROM
-	u32 sourceAddress
-	if (paletteVariant == 0)
+	u16 numColors = System.loadExternalPaletteData("character_palette_sonic", 0, 0x800000, 0x20)
+	for (u8 i = 0; i < numColors; ++i)
 	{
-		// Normal palette variant
-		sourceAddress = (character != CHARACTER_KNUCKLES) ? 0x0a8a3c : 0x0a8afc
-		copyMemory(targetAddress, sourceAddress, 0x20)
-	}
-	else
-	{
-		// Underwater palette variant
-		if (paletteVariant <= 2)
-		{
-			sourceAddress = 0x0a8c9c
-		}
-		else
-		{
-			sourceAddress = 0x0a8e5c
-		}
-		copyMemory(targetAddress, sourceAddress, 0x20)
-
-		if (character == CHARACTER_KNUCKLES)
-		{
-			// Copying in Knuckles' colors into underwater palette; these are in fact mostly different:
-			//  - paletteVariant == 1  -> AIZ:		0x0a6a, 0x0a2a, 0x0624
-			//  - paletteVariant == 2  -> ICZ:		0x0a4c, 0x0a28, 0x0428
-			//  - paletteVariant == 3  -> HCZ:		0x0e2a, 0x0c0a, 0x0a06
-			//  - paletteVariant == 4  -> CNZ/LBZ:	0x064c, 0x0628, 0x0624
-			if (paletteVariant == 1)
-			{
-				A1 = 0x007a4a
-			}
-			else if (paletteVariant == 2)
-			{
-				A1 = 0x007a4a + 30
-			}
-			else if (paletteVariant == 3)
-			{
-				A1 = 0x007a4a + 6
-			}
-			else
-			{
-				A1 = 0x007a4a + 18
-			}
-			copyMemory(targetAddress + 0x04, A1, 6)
-		}
-	}
-
-	// Allow for loading modded palettes
-	if (EXTENDED_CHARACTER_PALETTES)
-	{
-		u16 numColors = System.loadExternalPaletteData(getCharacterPaletteKey(CHARACTER_SONIC), paletteVariant, 0x800000, 0x20)
-		for (u8 i = 0; i < numColors; ++i)
-		{
-			u32 rgba = u32[0x800000 + i * 4]
-			u16[targetAddress + i * 2] = packColorExt(rgba)
-		}
-
-		if (numColors < 0x20)
-		{
-			// First 16 colors got written in any case
-			numColors = max(numColors, 0x10)
-			zeroMemory(targetAddress + numColors * 2, 0x40 - numColors * 2)
-		}
+	    u32 rgba = u32[0x800000 + u32(i) * 4]
+	    Renderer.setPaletteColorPacked(0x120 + u16(i), packColorExt(rgba))
 	}
 }
 
@@ -425,7 +351,7 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 			key = Renderer.setupCustomCharacterSprite(0x100000, 0x148182, 0x146620, char.animation.sprite, 0x00)
 
 		SpriteHandle Sonic = Renderer.addSpriteHandle(key, px, py, renderQueue) // Rendering
-			Sonic.setPaletteOffset(0xa0) // Use the palette that we loaded
+			Sonic.setPaletteOffset(0x120) // Use the palette that we loaded
 		return true
 	}
 return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
