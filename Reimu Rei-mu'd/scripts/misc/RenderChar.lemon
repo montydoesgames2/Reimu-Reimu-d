@@ -6,7 +6,7 @@
 
 function void MISC.UpdateAnimation(u8 character)
 {
-	if character != CHARACTER_REIMU && character != CHARACTER_REIMU_TAILS
+	if character != CHARACTER_CUSTOM
 	{
 		base.MISC.UpdateAnimation(character)
 		return
@@ -77,6 +77,38 @@ function void UpdateSonicAnimation()
 		base.UpdateSonicAnimation()
 }
 
+//Change to MISC update function
+//# address-hook(0x015868)
+function void UpdateTailsAnimation_inner()
+{
+	if char.state == 0x31 || char.state == 0x36 //Spring twirl & Falling sprites compat
+	{
+		base.UpdateTailsAnimation_inner()
+		return
+	}
+
+	if MISC.player > 3
+		MISC.UpdateAnimation(MISC.player)
+	else
+		base.UpdateTailsAnimation_inner()
+}
+
+//Change to MISC update function
+//# address-hook(0x017d30) end(0x017ef0)
+function void UpdateKnucklesAnimation()
+{
+	if char.state == 0x31 || char.state == 0x36 //Spring twirl & Falling sprites compat
+	{
+		base.UpdateKnucklesAnimation()
+		return
+	}
+
+	if MISC.player > 3
+		MISC.UpdateAnimation(MISC.player)
+	else
+		base.UpdateKnucklesAnimation()
+}
+
 /*
 	BASE CHARACTER RENDERING
 	none of this shit actually NEEDS to be edited technically, just use the helper function. but it's here for more specific changes if you'd like.
@@ -93,13 +125,13 @@ function bool Standalone.drawCharacterSprite(u8 character, u8 variant, s16 px, s
 //@ Original function taken from sonic3air_dev/scripts/standalone/rendering/render_character.lemon
 function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s16 px, s16 py, bool asSmallGhost)
 {
-	if (MISCchar != CHARACTER_REIMU && MISCchar != CHARACTER_REIMU_TAILS)
+	if (MISCchar != CHARACTER_CUSTOM)
 	{
 		return base.MISC.drawCharacterSprite(character, MISCchar, variant, px, py, asSmallGhost)
 	}
 	
-	bool isPlayer1 = (variant == 0)
-	u32 characterAddress = isPlayer1 ? 0xffffb000 : 0xffffb04a
+	bool isPlayer1 = (A0 == 0xffffb000)
+	u32 characterAddress = A0
 	
 	// Check only needed for Tails' tails
 	if (variant == 2)
@@ -416,7 +448,12 @@ function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s1
 	u8 atex = (char.sprite_attributes >> 9) & 0x30
 	if (EXTENDED_CHARACTER_PALETTES)
 	{
-		u8 player = (A0 == 0xffffb000) ? 0 : (A0 == 0xffffb04a) ? 1 : (A0 == 0xffffc2ca) ? 2 : 3
+		u8 player
+		if variant == 2
+			player = (u16[A0 + 0x30] == 0xb000) ? 0 : (u16[A0 + 0x30] == 0xb04a) ? 1 : (u16[A0 + 0x30] == 0xc2ca) ? 2 : 3
+		else
+			player = (A0 == 0xffffb000) ? 0 : (A0 == 0xffffb04a) ? 1 : (A0 == 0xffffc2ca) ? 2 : 3
+		
 		atex = 0x40 + player * 0x20
 	}
 
