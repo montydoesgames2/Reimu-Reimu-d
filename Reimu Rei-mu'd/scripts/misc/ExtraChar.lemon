@@ -4,7 +4,7 @@
 #endif
 
 //Added define for preprocessor check to allow compat with other mods without any one specific MISC mod needing to be active. (contributed by Nabbup)
-#define MISC_ACTIVE
+#define MISC_ACTIVE = 3
 
 function u8 getMainCharacter()
 {
@@ -230,6 +230,17 @@ function void fn00d6d0()
 	#endif
 }
 
+#if EXTRA_CHARACTERS_UNLIMITED
+
+function u8 ExtraChar.getHighestSlot()
+{
+	if (global.game_mode == 0 && levelselect.characters > 4) // force disable ESU char select logic
+		return 0
+	return base.ExtraChar.getHighestSlot()
+}
+
+#endif
+
 // render clear portraits in data select (contributed by nabbup)
 // note: i don't know the extent of which this works so if it doesn't work with your MISC character i don't know what to tell you lol.
 
@@ -368,7 +379,7 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 	if (objA0.update_address == 0x05d86a)
 	{
 		//if flying left use the micro character
-		if (char.render_flags & 0x01) && slotnum > 3
+		if (char.render_flags & 0x01) && global.characters > 3
 		{
 			u8 flags = prioFlag ? SPRITE_FLAG_PRIO : 0x00
 			u8 flags2 = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
