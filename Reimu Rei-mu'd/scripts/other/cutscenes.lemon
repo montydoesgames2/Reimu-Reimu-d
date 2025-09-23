@@ -331,7 +331,7 @@ function void fn2f748a()
 // Special palette loading for Sonic
 function void loadReimuCutsceneSonicCharacterPalette()
 {
-	u16 numColors = System.loadExternalPaletteData("character_palette_sonic", 0, 0x800000, 0x20)
+	u16 numColors = System.loadExternalPaletteData(getCharacterPaletteKey(CHARACTER_SONIC), 0, 0x800000, 0x20)
 	for (u8 i = 0; i < numColors; ++i)
 	{
 	    u32 rgba = u32[0x800000 + u32(i) * 4]
@@ -355,4 +355,5 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 		return true
 	}
 return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+
 }
