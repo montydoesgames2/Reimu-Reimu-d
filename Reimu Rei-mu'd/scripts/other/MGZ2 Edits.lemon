@@ -115,6 +115,19 @@ function void Reimu.setupMGZArena()
 	u8[0xffff8805] = 0xb2
 	u8[0xffff8806] = 0x01
 	u8[0xffff8807] = 0x01
+
+	if (global.characters == CHARACTER_REIMU)
+	{
+		u8[0xffff8781] = 0x45
+		u8[0xffff8801] = 0x4a
+		u8[0xffff8782] = 0x45
+		u8[0xffff8802] = 0x4a
+		u8[0xffff8783] = 0x45
+		u8[0xffff8803] = 0x4a
+		u8[0xffff8784] = 0x7b
+		u8[0xffff8804] = 0xb2
+		u8[0xffff8806] = 0xc6
+	}
 }
 
 //# address-hook(0x06c698) end(0x06c6ee)
@@ -220,4 +233,19 @@ function void fn06d4dc()
 
 	A2 = 0xfffffa8a
 	fn06d45e()
+}
+
+//# address-hook(0x06c2ee) end(0x06c316)
+function void fn06c2ee()
+{
+	if (global.characters != CHARACTER_REIMU_TAILS)
+	{
+		base.fn06c2ee()
+		return
+	}
+
+	if (level.wait_for_results)
+		return
+
+	fn06d13c()
 }

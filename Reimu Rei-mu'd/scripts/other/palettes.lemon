@@ -18,6 +18,7 @@ function u64 getCharacterEndPosePaletteKey(u8 character)
 {
 	if (character == CHARACTER_SONIC) && (u8[0xffffe654] == 0) && (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
 	{
+		debugLog("dumbass")
 	    if (ReimuRandomiser == CHARACTER_REIMU)
 	        return "StoryofEndertale"
         else if (ReimuNitoriCompat) && (Mods.isModActive("Nitori Kawashiro In 3 A.I.R."))
@@ -108,4 +109,16 @@ function u8 getModdedEndPosePaletteLine(u8 character, bool isHyperEffect)
 		return 1
 	else
 		return base.getModdedEndPosePaletteLine(character, isHyperEffect)
+}
+
+//# address-hook(0x02e3da) end(0x02e40e)
+function void fn02e3da()
+{
+	base.fn02e3da()
+
+	if !(global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+		return
+
+loadCharacterPalette(CHARACTER_SONIC, 0x802000, 0)
+loadCharacterPalette(CHARACTER_SONIC, 0x802180, 0)
 }
