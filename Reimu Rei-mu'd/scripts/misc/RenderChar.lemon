@@ -6,7 +6,7 @@
 
 function void MISC.UpdateAnimation(u8 character)
 {
-	if (character != CHARACTER_REIMU) && (character != CHARACTER_REIMU_TAILS)
+	if character != CHARACTER_REIMU && character != CHARACTER_REIMU_TAILS
 	{
 		base.MISC.UpdateAnimation(character)
 		return
@@ -117,7 +117,7 @@ function void UpdateKnucklesAnimation()
 //Don't worry about rendering player 2 here. this function is also included in the custom player 2s addon
 function bool Standalone.drawCharacterSprite(u8 character, u8 variant, s16 px, s16 py, bool asSmallGhost)
 {
-	if A0 == 0xffffb000 && global.characters > 3
+	if (A0 == 0xffffb000 || (A0 == tailstails.p1 && u16[tailstails.p1 + 0x30] == 0xb000)) && global.characters > 3
 		return MISC.drawCharacterSprite(character, global.characters, variant, px, py, asSmallGhost)
 	return base.Standalone.drawCharacterSprite(character, variant, px, py, asSmallGhost)
 }
