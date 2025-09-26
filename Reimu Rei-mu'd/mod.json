@@ -5,9 +5,9 @@
     "Name": "Reimu Rei-mu'd",
     "Author": "montydoesgames",
     "Description": "This mod adds Reimu from TOUHOU PROJECT! Experience a new story, new palettes and additional songs provided by the likes of JX and ZUN!",
-    "ModVersion": "5.0.0",
+    "ModVersion": "4.5.0",
     "URL": "Spritesheet was made by Hartflip0218, Blue Spheres\nsprites by Blueby and original sprite port mod by HardSonicStorm.",
-    "GameVersion": "20.03.22.0",
+    "GameVersion": "25.02.15.0",
     "UniqueID": "ReimuRemadeBaseMod",
 	},
 	"OtherMods":
@@ -81,4 +81,5 @@
 			}
         ]
 	}
+
 }
