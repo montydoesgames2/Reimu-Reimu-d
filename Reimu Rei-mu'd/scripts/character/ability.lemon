@@ -1,18 +1,12 @@
-// Here we're replacing the Super Flicky object with the Gohei Stick. Reimu will never be able to use them in normal gameplay so this affects nothing if I change it.
+// -- Gohei Stick -- \\
 
 // How it works:
 
-// Imagine Pyra's Blazing End in SSBU, but you charge it. Yeah.
+// Imagine Pyra's Blazing End in SSBU. Yeah.
 
-//# address-hook(0x01a19c) end(0x01a1ee)
-function void fn01a19c()
+//# address-hook(0x0fa19c) end(0x0fa1ee)
+function void GoheiStick.Init()
 {
-	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
-	{
-		base.fn01a19c()
-		return
-	}
-
 	objA0.mapping_offset = 0x01a464
 	objA0.render_flags = render_flag.WORLD
 	objA0.sprite_priority = 0x80
@@ -25,22 +19,16 @@ function void fn01a19c()
 	objA0.velocity.y = 0
 	objA0.base_state = 0x02
 
-	objA0.update_address = 0x01a1f4
-	fn01a1f4()
+	objA0.update_address = 0x0fa1f4
+	GoheiStick.Update()
 }
 
 
-//# address-hook(0x01a1f4) end(0x01a226)
-function void fn01a1f4()
+//# address-hook(0x0fa1f4) end(0x0fa226)
+function void GoheiStick.Update()
 {
-	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
-	{
-		base.fn01a1f4()
-		return
-	}
-
 	if (objA0.base_state != 0x02)
-		fn01a292()
+		GoheiReturn()
 	else
 	{
 		objA0.position.x.u16 = u16[0xffffb010]
@@ -57,7 +45,7 @@ function void fn01a1f4()
 	}
 
 	u32 backupA1 = A1
-	GoheiStick.DoCollisionShit()
+	ReimuObjects.DoCollisionShit()
 	A1 = backupA1
 	GoheiStickUpdateRingCollection()
 
@@ -92,7 +80,7 @@ function void fn01a1f4()
 	DrawObject()
 }
 
-function void GoheiStick.DoCollisionShit() // WORK, DAMMIT
+function void ReimuObjects.DoCollisionShit() // WORK, DAMMIT
 {
 	u16 numObjects = global.dynamic_objects.size + 4		// Actually it's twice the number of dynamic objects
 	A4 = addressof(global.dynamic_objects.size) + 2		// Resulting address: 0xffffe382
@@ -190,7 +178,7 @@ function void GoheiStick.DoCollisionShit() // WORK, DAMMIT
 			if (checkBoxOverlap(objA0.position.x.u16 - 0x20, objA0.position.y.u16 - 0x20, 0x40, 0x40, px, py, sx, sy))
 			{
 				// Collision found
-				GoheiStick.OnCollisionWithDynamicObject()
+				ReimuObjects.OnCollisionWithDynamicObject()
 				return
 			}
 		}
@@ -199,7 +187,7 @@ function void GoheiStick.DoCollisionShit() // WORK, DAMMIT
 	}
 }
 
-function void GoheiStick.OnCollisionWithDynamicObject()
+function void ReimuObjects.OnCollisionWithDynamicObject()
 {
 	// Example values for objA1.collision_attributes:
 	//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
@@ -282,15 +270,8 @@ function void GoheiStick.OnCollisionWithDynamicObject()
 	}
 }
 
-//# address-hook(0x01a292) end(0x01a31c)
-function void fn01a292()
+function void GoheiReturn()
 {
-	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
-	{
-		base.fn01a292()
-		return
-	}
-
 	if (objA0.base_state == 0x04)
 	{
 		u8[0xffffb02f] = 2
@@ -432,7 +413,7 @@ function void GoheiStickUpdateRingCollection()
 
 function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 {
-	if (objA0.update_address == 0x01a1f4)
+	if (objA0.update_address == 0x0fa1f4)
 	{
 		if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS || global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS) // Reimu
 		{
@@ -455,7 +436,7 @@ function void ReimuPressedJumpInMidAir()
 	A1 = 0xffffb000
 	while (D7.s16 >= 0) && (super.active != 0xff)
 	{
-		if (u32[A1] == 0x01a1f4)
+		if (u32[A1] == 0x0fa1f4)
 			return
 		// Go on to next object
 		A1 += 0x4a
@@ -468,8 +449,9 @@ function void ReimuPressedJumpInMidAir()
 
 	if (allocDynamicObjectStd())
 	{
-		// Level results
-		objA1.update_address = 0x01a19c
+		// Gohei
+		objA1.update_address = 0x0fa19c
+		objA1.base_state = 0x02
 	}
 }
 
