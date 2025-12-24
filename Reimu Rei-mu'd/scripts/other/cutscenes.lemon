@@ -1,4 +1,4 @@
-/* // -- HCZ2 Knuckles Cutscene removal -- \\
+// -- HCZ2 Knuckles Cutscene removal -- \\
 // By this point Sonic would be in MGZ2
 
 //# address-hook(0x062112) end(0x06211e)
@@ -355,4 +355,4 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 		return true
 	}
 return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
-}*/
+}
