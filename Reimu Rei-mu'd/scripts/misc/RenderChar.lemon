@@ -114,22 +114,27 @@ function void UpdateKnucklesAnimation()
 	none of this shit actually NEEDS to be edited technically, just use the helper function. but it's here for more specific changes if you'd like.
 */
 
-//Don't worry about rendering player 2 here. this function is also included in the custom player 2s addon
-function bool Standalone.drawCharacterSprite(u8 character, u8 variant, s16 px, s16 py, bool asSmallGhost)
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 {
-	if (A0 == 0xffffb000 || (A0 == tailstails.p1 && u16[tailstails.p1 + 0x30] == 0xb000)) && global.characters > 3
-		return MISC.drawCharacterSprite(character, global.characters, variant, px, py, asSmallGhost)
-	return base.Standalone.drawCharacterSprite(character, variant, px, py, asSmallGhost)
+	bool isPlayer = A0 == 0xffffb000 || A0 == 0xffffb04a
+	bool isTailObject = (A0 == tailstails.p1 && u16[tailstails.p1 + 0x30] == 0xb000) || (A0 == tailstails.p2 && u16[tailstails.p2 + 0x30] == 0xb04a)
+	#if TAGTEAM_ACTIVE
+		// this isn't in by default just so objects that take up those slots don't get confused for players
+		isPlayer |= (A0 == 0xffffc2ca || A0 == 0xffffc314) && objA0.update_address == addressof(Character.BaseUpdate.TagTeamPlayer)
+		isTailObject |= (A0 == tailstails.p3 && u16[tailstails.p3 + 0x30] == 0xc2ca) || (A0 == tailstails.p4 && u16[tailstails.p4 + 0x30] == 0xc314)
+	#endif
+    if ((isPlayer || isTailObject) && (MISC.player == CHARACTER_REIMU || MISC.player == CHARACTER_REIMU_TAILS))
+	{
+		if (debug_mode.state && debug_mode.state != 2 && A0 == 0xffffb000) // debug mode "placement" state
+			return false
+		return MISC.drawCHARACTER_REIMU(char.character, (isTailObject ? 2 : (A0 == 0xffffb000) ? 0 : 1), px, py, false)
+	}
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
 }
 
-//@ Original function taken from sonic3air_dev/scripts/standalone/rendering/render_character.lemon
-function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s16 px, s16 py, bool asSmallGhost)
+// This is practically a different version of Standalone.drawCharacterSprite. You'll probably need custom rendering for Tails' Tails.
+function bool MISC.drawCHARACTER_REIMU(u8 character, u8 variant, s16 px, s16 py, bool asSmallGhost) // you can change this name obviously, but you need to change the function that's called in the code above.
 {
-	if (MISCchar != CHARACTER_REIMU) && (MISCchar != CHARACTER_REIMU_TAILS)
-	{
-		return base.MISC.drawCharacterSprite(character, MISCchar, variant, px, py, asSmallGhost)
-	}
-	
 	bool isPlayer1 = (A0 == 0xffffb000)
 	u32 characterAddress = A0
 	
@@ -138,25 +143,17 @@ function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s1
 	{
 		// No smooth rotation in Slot Machine
 		if (global.zone == 0x15)
-		{
 			return false
-		}
 		
 		characterAddress = 0xffff0000 + u16[A0 + 0x30]
 
 		// Do not render when blinking after hit
 		if (u8[characterAddress + 0x34] != 0 && ((u8[characterAddress + 0x34] + 1) & 0x04) == 0)
-		{
-			// Prevent emulator-like rendering
-			return true
-		}
+			return false
 
 		// Do not render when Tails looks into the background (e.g. LBZ 2 end cutscene) and in DEZ gravity transporters
 		if (u8[characterAddress + 0x22] >= 0x55 && u8[characterAddress + 0x22] <= 0x5b)
-		{
-			// Prevent emulator-like rendering
-			return true
-		}
+			return false
 
 		isPlayer1 = (characterAddress == 0xffffb000)
 		character = CHARACTER_TAILS
@@ -396,7 +393,7 @@ function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s1
 
 		if (key == 0)
 		{
-			key = MISC.GetCharSpriteKey(animationSprite, MISCchar) //custom sprite key
+			key = MISC.GetCharSpriteKey(animationSprite, MISC.player) //custom sprite key
 
 			if (!Renderer.hasCustomSprite(key))
 			{
@@ -470,7 +467,7 @@ function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s1
 	// Render character
 	if (asSmallGhost)
 	{
-		Renderer.drawSpriteTinted(key, px, py, atex, flags | SPRITE_FLAG_PRIO, 0xa800, angle, 0xc0ffffff, 0x8000)
+		Renderer.drawSpriteTinted(key, px, py, atex, flags | SPRITE_FLAG_PRIO, 0xa800, angle, 0xffffffc0, 0x8000)
 	}
 	else
 	{
@@ -510,7 +507,5 @@ function bool MISC.drawCharacterSprite(u8 character, u8 MISCchar, u8 variant, s1
 			Renderer.drawSprite(key, px0, py0, atex, flags, renderQueue - i, angle, 192 - i * 32)
 		}
 	}
-
-	// Prevent emulator-like rendering
 	return true
 }

@@ -280,6 +280,14 @@ function string MISC.GetCharNameDiscordRPC(u8 character)
 	return MISC.GetCharName(character+1)
 }
 
+// Used for the small image in the Discord RPC for your character, by default uses the unknown icon, you can add your own icon by replacing it with a link to your image
+function string MISC.setDiscordSmallImage(u8 character)
+{
+	if (character != CHARACTER_REIMU) && (character != CHARACTER_REIMU_TAILS)
+		return base.MISC.setDiscordSmallImage(character)
+	return (character == CHARACTER_REIMU) ? "https://raw.githubusercontent.com/montydoesgames2/Reimu-Reimu-d/refs/heads/main/DiscordRPC/ReimuAlone.png" : "https://raw.githubusercontent.com/montydoesgames2/Reimu-Reimu-d/refs/heads/main/DiscordRPC/ReimuTails.png"
+}
+
 // Used for your character's name in Act select. and probably at least one other thing (Contributed by AtomicRay)
 function string MISC.GetCharName(u8 character)
 {
@@ -630,4 +638,32 @@ function void MISC.SetCharHitbox(u8 player)
 	}
 	
 	base.MISC.SetCharHitbox(player)
+}
+
+function void MISC.DrawS3CIcon()
+{
+	u8 slotnum = levelselect.characters - 1
+	if (slotnum == CHARACTER_REIMU || slotnum == CHARACTER_REIMU_TAILS)
+	{
+		//offset for the icons
+		u8 lselect_icon_offset
+		if (getScreenWidth() > 320)
+		{
+			lselect_icon_offset = 0
+		}
+		else
+		{
+			lselect_icon_offset = 6
+		}
+		
+		//use these depending on which character icon you're rendering.
+		//if your character has a partner, render the partner with player2offset, vice versa.
+		s16 player1offset = getScreenExtend() + 247 + lselect_icon_offset
+		s16 player2offset = getScreenExtend() + 262 + lselect_icon_offset
+	
+		Renderer.drawCustomSprite("s3c_reimu", player1offset, 115, 0x00, 0, 0x2000) //replace with your sprites (only player 1. to render player 2, just copy and replace "player1offset" with player 2's.
+		if (slotnum == CHARACTER_REIMU_TAILS)
+			Renderer.drawCustomSprite("s3c_tails", player2offset, 115, 0x00, 0, 0x2000) //replace with your sprites (only player 1. to render player 2, just copy and replace "player1offset" with player 2's.
+	}
+	base.MISC.DrawS3CIcon()
 }

@@ -142,6 +142,8 @@ function void Character.BaseUpdate.MISCPartner()
 	A5 = addressof(camera.yoffset.tails)	// Address: 0xffffee2c
 	A6 = 0xffffcc9e							// Base address of dust cloud object
 	
+	System.callFunctionByName("MISC.CustomPlayerUpdates")
+	
 	if MISC.getCharBase(MISC.player2.character) == CHARACTER_SONIC
 	{
 		if char.character != CHARACTER_SONIC
@@ -309,20 +311,65 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
 }
 
-//Draw the 2nd player and their tails.
-function bool Standalone.drawCharacterSprite(u8 character, u8 variant, s16 px, s16 py, bool asSmallGhost)
+// 2nd player rendering is now (by default) handled by the same code as Player 1's in RenderChar.lemon
+// Code is necessary for it to work with off-screen players though, handled below:
+//# post-update-hook
+function void PostFrameUpdate()
 {
-	//base player
-	if u8[0xffffb000 + 0x29] < 4 && (A0 == 0xffffb000 || (A0 == tailstails.p1 && u8[0xffffb000 + 0x29] < 4))
-		return base.Standalone.drawCharacterSprite(character, variant, px, py, asSmallGhost)
-
-	//player 2
-	if (A0 == 0xffffb04a || A0 == tailstails.p2) && u8[0xffffb04a + 0x29] > 3
+	if (u8[0xffffb04a + 0x29] == CHARACTER_REIMU && Game.getSetting(SETTING_PLAYER2_OFFSCREEN) && global.game_mode == 0x0c && !competition_mode.active)
 	{
-		return MISC.drawCharacterSprite(character, u8[0xffffb04a + 0x29], variant, px, py, asSmallGhost)
-	}
+		u8 gamemodebackup = global.game_mode
+		global.game_mode = 0
+		base.PostFrameUpdate()
+		global.game_mode = gamemodebackup
 		
-	return base.Standalone.drawCharacterSprite(character, variant, px, py, asSmallGhost)
+		// basically the same as the default offscreen P2 rendering
+		// look at https://github.com/Eukaryot/sonic3air/blob/bd475a24c8cf509e36dff1a6eaf1b4d4167fc46d/Oxygen/sonic3air/scripts/standalone/enginecallbacks.lemon#L100 if you want to gain knowledge on it
+		A0 = 0xffffb04a
+		if (objA0.update_address != 0 && tails.control_counter > 0)
+		{
+			s32 halfx = getScreenWidth() / 2
+			s32 halfy = getScreenHeight() / 2
+			s32 px = s32(char.position.x.u16) - camera.foreground.x.u16 - halfx
+			s32 py = s32(char.position.y.u16) - camera.foreground.y.u16 - halfy
+
+			if (level.vertical_wrap == 0xff00)
+			{
+				// Consider vertical level wrap
+				py &= level.height.bitmask
+				if (py > level.height.bitmask / 2)
+					py -= (level.height.bitmask + 1)
+			}
+
+			if (abs(px) >= halfx || abs(py) >= halfy)
+			{
+				s32 maxX = halfx * 19/20
+				s32 maxY = halfy * 19/20
+				if (abs(px) > maxX)
+				{
+					py = py * maxX / abs(px)
+					px = (px > 0 ? maxX : -maxX)
+				}
+				if (abs(py) > maxY)
+				{
+					px = px * maxY / abs(py)
+					py = (py > 0 ? maxY : -maxY)
+				}
+
+				px += halfx
+				py += halfy
+				MISC.drawCHARACTER_REIMU(char.character, 1, px, py, true) // must match with the RenderChar.lemon function
+				// the code below CAN be removed if your character does not make use of a tail object
+				if (u16[tailstails.p2 + 0x30] != 0)
+				{
+					A0 = tailstails.p2
+					MISC.drawCHARACTER_REIMU(char.character, 2, px, py, true)
+				}
+			}
+		}
+		return
+	}
+	base.PostFrameUpdate()
 }
 
 //Don't allow partner super transformations
@@ -348,11 +395,6 @@ function void Character.Initialization.shared(u8 character)
 	
 	if objA0.update_address != addressof(Character.BaseUpdate.MISCPartner)
 		return
-		
-	if MISC.player > CHARACTER_KNUCKLES
-	{
-		MISC.SetCharHitbox(2)
-	}
 
 	if (isMainCharacter(CHARACTER_TAILS)) //fix the layers
 	{
@@ -375,66 +417,6 @@ function void Character.Initialization.shared(u8 character)
 	{
 		char.sprite_attributes = (Char.Tails.targetInVRAM >> 5) | (u16[0xffffb000 + 0x0a] & sprite_attribute.PRIORITY)
 		char.layer_flags = u16[0xffffb000 + 0x46]
-	}
-
-	super.active.tails = 0
-
-	if (tails.ai_routine != 0x12 && tails.ai_routine != 0x20)
-		tails.ai_routine = 0
-
-	tails.control_counter = 0
-	tails.respawn_counter = 0
-
-	//choose whether or not to keep tails' tails.
-	if (character == CHARACTER_TAILS)
-	{
-		// Init Tails' tails object
-		if A0 == 0xffffb000
-		{
-			u32[tailstails.p1] = addressof(TailsTails.Init)
-			u16[tailstails.p1 + 0x30] = 0xb000
-		}
-		else if A0 == 0xffffb04a
-		{
-			//either delete player 1's tail or set it to update for p1
-			if MISC.getCharBase((u8[0xffffb000 + 0x29] > 3) ? u8[0xffffb000 + 0x29] : u8[0xffffb000 + 0x29]-1) == CHARACTER_TAILS
-				u16[tailstails.p1 + 0x30] = 0xb000
-			else
-				u32[tailstails.p1] = 0
-		
-			u32[tailstails.p2] = addressof(TailsTails.Init)
-			u16[tailstails.p2 + 0x30] = 0xb04a
-		}
-		else if A0 == 0xffffc2ca
-		{
-			u32[tailstails.p3] = addressof(TailsTails.Init)
-			u16[tailstails.p3 + 0x30] = 0xc2ca
-		}
-		else if A0 == 0xffffc314
-		{
-			u32[tailstails.p4] = addressof(TailsTails.Init)
-			u16[tailstails.p4 + 0x30] = 0xc314
-		}
-	}
-	else
-	{
-		// Init Tails' tails object
-		if A0 == 0xffffb000
-		{
-			u32[tailstails.p1] = 0
-		}
-		else if A0 == 0xffffb04a
-		{
-			u32[tailstails.p2] = 0	
-		}
-		else if A0 == 0xffffc2ca
-		{
-			u32[tailstails.p3] = 0
-		}
-		else if A0 == 0xffffc314
-		{
-			u32[tailstails.p4] = 0
-		}
 	}
 	
 	checkpoint.number.backup.tails = checkpoint.number
@@ -514,21 +496,21 @@ function void fn013bf8()
 	//You can change these, since it's pretty much all that matters
 	if (objA0.render_flags & render_flag.VISIBLE)
 	{
-		if char.character == CHARACTER_SONIC
+		if MISC.GetFlyGlideBehaviour() == 0
 		{
 			UpdateMovementStraight()
 			char.velocity.y += 0x38
 			char.flags |= char.flag.IN_AIR
 			char.state = char.state.ROLLING
 		}
-		else if char.character == CHARACTER_TAILS
+		else if MISC.GetFlyGlideBehaviour() == 1
 		{
 			tails.flight_countdown = 0xf0
 			char.flags |= char.flag.IN_AIR
 			UpdateTailsFlight_innerB()
 			tails.respawn_counter = 0
 		}
-		else
+		else //if MISC.GetFlyGlideBehaviour() == 2
 		{
 			UpdateKnucklesGlide()
 		}
@@ -825,7 +807,7 @@ function void DebugMode.EvaluateInput()
 function void copyMemory(u32 destAddress, u32 sourceAddress, u32 bytes)
 {
 	base.copyMemory(destAddress, sourceAddress, bytes)
-	if sourceAddress == 0x00896e && MISC.getCharBase(MISC.player2.character) == CHARACTER_KNUCKLES
+	if sourceAddress == 0x00896e && global.characters == CHARACTER_REIMU && MISC.getCharBase(MISC.player2.character) == CHARACTER_KNUCKLES
 	{
 		base.copyMemory(0xfffffc90, 0x0089ee, 0x10)
 	}
@@ -1243,6 +1225,22 @@ function void UpdateControllers()
     base.UpdateControllers()
 }
 
+function u8 MISC.GetFlyGlideBehaviour()
+{
+	//check for MISC.player or whatever values you need to find the player 2 character.
+	//these are the keys:
+	// 0 - Sonic, just rolling
+	// 1 - Tails, flying using FLYDOWN state
+	// 2 - Knuckles, Gliding
+	
+	if objA0.update_address != addressof(Character.BaseUpdate.MISCPartner)
+	{
+		return base.MISC.GetFlyGlideBehaviour()
+	}
+
+	return 0 //by default, make all characters just fall
+}
+
 //# address-hook(0x013d4a) end(0x013ec8)
 function void fn013d4a()
 {   
@@ -1254,12 +1252,16 @@ function void fn013d4a()
 
     if (u8[0xffffb000 + 0x05] >= base_state.DIED)
 	{
-		tails.ai_routine = 0x04
 		char.spindash = 0
 		char.spindash_charge = 0
 		char.control_flags = (control_flag.DISABLE_INTERACTION | control_flag.DISABLE_UPDATE)
-		char.flags = char.flag.IN_AIR
-		char.state = char.state.TAILS_FLYDOWN
+		
+		if MISC.GetFlyGlideBehaviour() == 1
+		{
+			tails.ai_routine = 0x04
+			char.flags = char.flag.IN_AIR
+			char.state = char.state.TAILS_FLYDOWN
+		}
 		return
 	}
 

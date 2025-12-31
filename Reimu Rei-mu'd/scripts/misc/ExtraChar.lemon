@@ -72,9 +72,18 @@ function u8 getHighestValidBluSphereChar() //checks for the highest possible cha
 	return 0x00
 }
 
+function void LevelSelect.init()
+{
+	if Mods.isModActive("Sonic 3 Complete Level Select+")
+		MISC.DrawS3CIcon()
+	base.LevelSelect.init()
+}
+
 // fix for level select characters unable to be used in special stage
 function bool LevelSelect.innerUpdate()
 {
+	if Mods.isModActive("Sonic 3 Complete Level Select+")
+		MISC.DrawS3CIcon()
 	bool base = base.LevelSelect.innerUpdate()
 	if (global.game_mode == 0x34)
 		SetGlobalCharacters()
@@ -229,17 +238,6 @@ function void fn00d6d0()
 	D0 = character
 	#endif
 }
-
-#if EXTRA_CHARACTERS_UNLIMITED
-
-function u8 ExtraChar.getHighestSlot()
-{
-	if (global.game_mode == 0 && levelselect.characters > 4) // force disable ESU char select logic
-		return 0
-	return base.ExtraChar.getHighestSlot()
-}
-
-#endif
 
 // render clear portraits in data select (contributed by nabbup)
 // note: i don't know the extent of which this works so if it doesn't work with your MISC character i don't know what to tell you lol.
@@ -689,7 +687,10 @@ function void MISC.setDiscordDetails()
 	else
 		emeralds = stringformat(" %s", emeralds)
 	string str = stringformat("%s%s", name, emeralds)
-	Game.setDiscordSmallImage("character_unknown")
+	string icon = MISC.setDiscordSmallImage(global.characters)
+	if (!icon) // triggering failsafe
+		icon = "character_unknown"
+	Game.setDiscordSmallImage(icon)
 	Game.setDiscordDetails(str)
 }
 
@@ -802,6 +803,8 @@ function void InitializeGameCharacters()
 		base.InitializeGameCharacters()
 		return
 	}
+	
+	MISC.setPlayer(1, global.characters)
 
 	// One of the bonus stages?
 	if (global.zone_act >= 0x1300 && global.zone_act < 0x1600)
@@ -861,8 +864,6 @@ function void InitializeGameCharacters()
 	}
 	else
 		assert(false, "Unsupported character selection")
-		
-	MISC.setPlayer(1, global.characters)
 
 	if !MISC.SpawnSpecialPlayer2()
 	{
@@ -1324,7 +1325,7 @@ function void FadeOutColorUniform()
 	
 	if global.zone_act != 0x0d01 //don't do this if you're not in the ending
 		return
-		
+
 	super.palettefx.state = 0
 	super.palettefx.timer = 0x80
 }
@@ -1539,6 +1540,17 @@ function void SaveGameOnLevelFinished()
 
 	level.giantrings_clear = 0
 }
+
+#if EXTRA_CHARACTERS_UNLIMITED
+
+function u8 ExtraChar.getHighestSlot()
+{
+	if (global.game_mode == 0 && levelselect.characters > 4) // force disable ESU char select logic
+		return 0
+	return base.ExtraChar.getHighestSlot()
+}
+
+#endif
 
 function void loadCharacterPalette(u8 character, u32 targetAddress, u8 paletteVariant)
 {
@@ -1759,65 +1771,54 @@ function bool disableOriginsIntrosContent()
         return base.disableOriginsIntrosContent()
 }
 
-// Loading palette data - This is where we add the MISC palette
-/*
-function void copyPaletteDataFromTable(u8 index, u16 ramAddress)
+//# address-hook(0x07b2dc) end(0x07b3a6)
+function void fn07b2dc()
 {
-	if (global.characters < 4 || u8[0xffffe654] > 0)
-	{
-		base.copyPaletteDataFromTable(index, ramAddress)
-		return
-	}
-	base.copyPaletteDataFromTable(index, ramAddress)
-	u32 dest = 0
-	if (EXTENDED_CHARACTER_PALETTES)
-	{
-		u8 paletteVariant = 0xff
-		if (index == 0x03 || index == 0x05)
-		{
-			paletteVariant = 0
-		}
-		else if (index == 0x2b || index == 0x2c)
-		{
-			paletteVariant = 1		// AIZ underwater
-		}
-		else if (index == 0x39)
-		{
-			paletteVariant = 2		// ICZ underwater
-		}
-		else if (index == 0x31 || index == 0x32)
-		{
-			paletteVariant = 3		// HCZ underwater
-		}
-		else if (index == 0x2d  || index == 0x2e || index == 0x3a)
-		{
-			paletteVariant = 4		// CNZ/LBZ underwater
-		}
+	if (global.characters >= 4 && global.act == 0)
+		u16[0xfffffa9a] = 0
+	base.fn07b2dc()
+}
 
-		if (paletteVariant != 0xff)
+//# address-hook(0x01aada) end(0x01ab18)
+function void UpdateGameObjects()
+{
+	base.UpdateGameObjects()
+
+	A0 = 0xffffb000
+	if (competition_mode.active == 0 && char.base_state >= base_state.DIED && char.base_state != base_state.DROWNED)
+	{
+
+		A0 = tailstails.p1
+		if u16[tailstails.p1 + 0x30] == 0xb000
 		{
-			if (paletteVariant == 0)
-			{
-				// Load all characters' normal (non-underwater) palettes, either to fading or non-fading palette buffer
-				dest = (ramAddress == 0xfc00) ? 0x802000 : 0x802180
-				loadCharacterPalette(CHARACTER_SONIC,    dest + 0x00, 0)
-				loadCharacterPalette(CHARACTER_TAILS,    dest + 0x40, 0)
-				loadCharacterPalette(CHARACTER_KNUCKLES, dest + 0x80, 0)
-				loadCharacterPalette(4, ((ramAddress == 0xfc00) ? 0x8020c0 : 0x802240), paletteVariant) // MISC char
-			}
-			else
-			{
-				// Load all characters' underwater palettes, either to fading or non-fading palette buffer
-				dest = (ramAddress == 0xf080) ? 0x802300 : 0x802480
-				loadCharacterPalette(CHARACTER_SONIC,    dest + 0x00, paletteVariant)
-				loadCharacterPalette(CHARACTER_TAILS,    dest + 0x40, paletteVariant)
-				loadCharacterPalette(CHARACTER_KNUCKLES, dest + 0x80, paletteVariant)
-				loadCharacterPalette(4, ((ramAddress == 0xfc00) ? 0x8023c0 : 0x802540), paletteVariant) // MISC char
-			}
+			D7 = 1
+			updateGameObjectLoop()
 		}
+		
+		A0 = tailstails.p2
+		if u16[tailstails.p2 + 0x30] == 0xb04a
+		{
+			D7 = 1
+			updateGameObjectLoop()
+		}
+		
+		#if TAGTEAM_ACTIVE
+			A0 = tailstails.p3
+			if u16[tailstails.p3 + 0x30] == 0xc2ca
+			{
+				D7 = 1
+				updateGameObjectLoop()
+			}
+			
+			A0 = tailstails.p4
+			if u16[tailstails.p4 + 0x30] == 0xc314
+			{
+				D7 = 1
+				updateGameObjectLoop()
+			}
+		#endif
 	}
 }
-*/
 
 #if RMSSY_Active
 function void waitForNextFrame()
