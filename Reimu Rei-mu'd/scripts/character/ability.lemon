@@ -1,3 +1,7 @@
+global u8 ReimuMoveset
+global u8 ReimuActButton
+constant u8 char.state.REIMU_HOVERGLIDE = 0x20
+
 // -- Gohei Stick -- \\
 
 // How it works:
@@ -34,14 +38,22 @@ function void GoheiStick.Update()
 		objA0.position.x.u16 = u16[0xffffb010]
 		objA0.position.y.u16 = u16[0xffffb014]
 
-		bool launchUp = (!(global.inv_gravity) && (control.player1.state & CONTROL_UP)) || ((global.inv_gravity) && (control.player1.state & CONTROL_DOWN))
-		if !(control.player1.state & CONTROL_ABC) || (launchUp)
+		if !(ReimuMoveset)
 		{
-			objA0.base_state = (launchUp) ? 0x06 : 0x04
-			objA0.countdown_value = (launchUp) ? 90 : 15
+			bool launchUp = (!(global.inv_gravity) && (control.player1.state & CONTROL_UP)) || ((global.inv_gravity) && (control.player1.state & CONTROL_DOWN))
+			if !(control.player1.state & CONTROL_ABC) || (launchUp)
+			{
+				objA0.base_state = (launchUp) ? 0x06 : 0x04
+				objA0.countdown_value = (launchUp) ? 90 : 15
+			}
+			else if (u8[0xffffb02f] == 0)
+				UnloadObject()
 		}
 		else if (u8[0xffffb02f] == 0)
-			UnloadObject()
+		{
+				objA0.base_state = 0x04
+				objA0.countdown_value = 5
+		}
 	}
 
 	u32 backupA1 = A1
@@ -415,7 +427,7 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 {
 	if (objA0.update_address == 0x0fa1f4)
 	{
-		if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS || global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS) // Reimu
+		if (isReimu()) // Reimu
 		{
 			Renderer.drawCustomSprite(stringformat("Reimu_Gohei_%d", objA0.animation.sprite), px, py, 0x00, objA0.render_flags + SPRITE_FLAG_PRIO, renderQueue)
 			return true
@@ -430,6 +442,14 @@ function void ReimuPressedJumpInMidAir()
 	// Remove control lock
 	char.flags &= ~char.flag.CONTROL_LOCK
 
+	if !(ReimuMoveset)
+		ReimuMoveset.Original()
+	else if (char.double_jump_state == 0)
+		ReimuMoveset.Reivamped()
+}
+
+function void ReimuMoveset.Original()
+{
 	s16 backupD7 = D7.s16
 	u32 backupA1 = A1
 	D7.s16 = 0x6d
@@ -455,9 +475,28 @@ function void ReimuPressedJumpInMidAir()
 	}
 }
 
+function void ReimuMoveset.Reivamped()
+{
+	bool SecondAction = (ReimuMoveset == 2) ? (control.player1.pressed & ReimuActButton) : (control.player1.state & CONTROL_UP)
+
+	if (SecondAction)
+	{
+		char.double_jump_state = 2
+		char.velocity.y = -0x200
+		char.state = char.state.REIMU_HOVERGLIDE
+	}
+	else
+	{
+		char.velocity.y = 0x800
+		char.state = char.state.ROLLING
+		char.flags |= char.flag.ROLLING
+		ReimuMoveset.Original()
+	}
+}
+
 function void Character.updateJumpMoves()
 {
-	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS) || (char.character != CHARACTER_SONIC)
+	if !(isReimu())
 	{
 		base.Character.updateJumpMoves()
 		return
@@ -482,7 +521,7 @@ function void Character.updateJumpMoves()
 		}
 		else
 		{
-			bool launchUp = (!(global.inv_gravity) && (input_state & CONTROL_UP)) || ((global.inv_gravity) && (input_state & CONTROL_DOWN))
+			bool launchUp = ((!(global.inv_gravity) && (input_state & CONTROL_UP)) || ((global.inv_gravity) && (input_state & CONTROL_DOWN))) && !(ReimuMoveset)
 			if (char.double_jump_state == 0)
 			{
 				#if STANDALONE
@@ -525,17 +564,49 @@ function void Character.updateJumpMoves()
 	}
 }
 
+function void Character.LandingOnGroundResetState()
+{
+	if !(isReimu())
+	{
+		base.Character.LandingOnGroundResetState()
+		return
+	}
+
+	char.flags &= ~(char.flag.IN_AIR | char.flag.PUSHING | char.flag.CONTROL_LOCK)
+	char.jumping = 0
+	score.bonus_counter = 0		// No more increasing bonuses after hitting the ground
+	char.rotation.x = 0
+	char.flags2d = 0
+	char.rotation.x.count = 0
+	char.look_up_down_timer = 0
+
+	// Check for double jump state
+	if (ReimuMoveset && char.double_jump_state == 1)
+		Reimu.releaseDropBoost()
+
+	char.double_jump_state = 0
+}
+
+function void Reimu.releaseDropBoost()
+{
+	char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0xb00 : 0xb00
+	char.state = char.state.ROLLING
+	char.flags |= char.flag.ROLLING
+	char.hitbox_extends.x = char.hitbox.x.ROLLING
+	char.hitbox_extends.y = char.hitbox.y.ROLLING
+}
+
 //# address-hook(0x012232) end(0x0122b8)
 function void SonicLandingBubbleBounce()
 {
-	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS || global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	if (isReimu())
 		return
 base.SonicLandingBubbleBounce()
 }
 
 function bool Character.updateSuperPeelout()
 {
-	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS || global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+	if (isReimu())
 		return false
 return base.Character.updateSuperPeelout()
 }
@@ -543,7 +614,7 @@ return base.Character.updateSuperPeelout()
 //# address-hook(0x00fe8e) end(0x00ff04)
 function void Character.CheckCollisionsWithDynamicObjects()
 {
-	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
+	if !(isReimu())
 	{
 		base.Character.CheckCollisionsWithDynamicObjects()
 		return
