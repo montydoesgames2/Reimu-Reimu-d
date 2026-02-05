@@ -356,7 +356,7 @@ function void MISC.drawCharSprite(s16 px, s16 py, u16 renderQueue, u8 slotnum)
 {
 	if (slotnum == CHARACTER_REIMU || slotnum == CHARACTER_REIMU_TAILS)
 	{
-		string key = "charselect_reimu" //replace with your char sprite
+		string key = ((isMarisa) && (slotnum == CHARACTER_REIMU)) ? "charselect_marisa" : "charselect_reimu" //replace with your char sprite
 			
 		//use this to add tails if you want. KEEP IN MIND that if you want tails, you need to -6 from your base char's px.
 		if MISC.GetPartner(slotnum + 1) != 0xff

@@ -107,6 +107,7 @@ function void fn00d6d0()
 			// Reset "Blink" animation
 			u8[A0 + 0x3c] = 0x00
 			u8[A0 + 0x3d] = 0x00
+			objA0.compound.sprite1.animation.sprite = 0x0f //Wasn't necessary before, but apparently something broke in the new test build. ahahahahaha fuck my life
 			
 			// While the slot is not Knuckles (and Tails), navigate through the default slots
 			if character == maxCharacterSelection
@@ -151,6 +152,7 @@ function void fn00d6d0()
 			// Reset "Blink" animation
 			u8[A0 + 0x3c] = 0x00
 			u8[A0 + 0x3d] = 0x00
+			objA0.compound.sprite1.animation.sprite = 0x0f //Wasn't necessary before, but apparently something broke in the new test build. ahahahahaha fuck my life
 			
 			// Set extra variables to highest available slot after Sonic and Tails slot
 			if (character == CHARS_SONIC_AND_TAILS)
@@ -208,6 +210,8 @@ function void fn00d6d0()
 
 		if (control.pad1.pressed & CONTROL_UP) && !objA0.animation.timer
 		{
+			objA0.compound.sprite1.animation.sprite = 0x0f //Wasn't necessary before, but apparently something broke in the new test build. ahahahahaha fuck my life
+		
 			character = (character < maxCharacterSelection) ? (character + 1) : CHARS_SONIC_AND_TAILS
 			
 			while !(isValidChar(character))
@@ -220,6 +224,8 @@ function void fn00d6d0()
 		}
 		else if (control.pad1.pressed & CONTROL_DOWN) && !objA0.animation.timer
 		{
+			objA0.compound.sprite1.animation.sprite = 0x0f //Wasn't necessary before, but apparently something broke in the new test build. ahahahahaha fuck my life
+		
 			character = (character > CHARS_SONIC_AND_TAILS) ? (character - 1) : maxCharacterSelection
 			
 			while !(isValidChar(character))
@@ -1472,7 +1478,7 @@ function bool DEZFinalBoss3.canPlayerEnterDoomsday()
 	if global.characters < 4
 		return base.DEZFinalBoss3.canPlayerEnterDoomsday()
 
-	if MISC.getAllowedZones(global.characters) == 0x0d
+	if MISC.getAllowedZones(global.characters) == 0x0d && global.chaos_emeralds == 7
 		return true
 	else
 		return false

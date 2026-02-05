@@ -1,0 +1,42 @@
+
+//FOR SONIC BASE CHARACTERS
+//if your character isn't a sonic base, none of this matters, and you can just delete this script.
+
+//if you want your character to have no intro, use this. otherwise, you can remove it.
+function bool isSonicIntro()
+{
+	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS) || global.zone_act != 0x0000 || checkpoint.number != 0
+		return base.isSonicIntro()
+	return false
+}
+
+//again, only if you want your character to have no intro. remove otherwise 
+//# address-hook(0x01c4d0) end(0x01c54e)
+function void fn01c4d0()
+{
+	if (global.characters != CHARACTER_REIMU && global.characters != CHARACTER_REIMU_TAILS)
+	{
+		base.fn01c4d0()
+		return
+	}
+
+	move_area.left = 0x1308
+#if STANDALONE
+	// Show a bit more to the left, that looks better in widescreen
+	move_area.left = max(0x12e0, move_area.left - getScreenExtend())
+#endif
+
+	if (camera.position.x.u16 >= 0x1400)
+	{
+
+		// Switch to new checkpoint -- mainly for Sonic, so his intro gets skipped after death
+		checkpoint.number = 1
+		checkpoint.x = 0x13a0
+		checkpoint.y = 0x041a
+		Checkpoint.SaveCurrentState()
+
+		checkpoint.time = 0
+		requestLoadingPatterns(0x08)		// Monitor sprites
+		camera.update_routine += 2
+	}
+}
