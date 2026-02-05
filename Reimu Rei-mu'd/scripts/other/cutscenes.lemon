@@ -88,7 +88,7 @@ function void fn067aea()
 
 
 // -- HPZ - This is a big one. -- \\
-
+/*
 //# address-hook(0x063d1a) end(0x063dd2)
 function void fn063d1a()
 {
@@ -355,4 +355,129 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 		return true
 	}
 return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}*/
+
+//# address-hook(0x045c8e) end(0x045dac)
+function void fn045c8e()
+{
+	if (objA1.update_address != addressof(Character.BaseUpdate.MISCPartner))
+	{
+		base.fn045c8e()
+		return
+	}
+
+	// s8[A4] is the state of this character:
+	//  - 0x00	-> Has not reached the teleporter yet
+	//  - 0x01	-> Waiting for character to touch the ground
+	//  - 0x02	-> Waiting for other character
+	//  - 0x03	-> Waiting to jump in
+	//  - 0x04	-> Jumping in
+	//  - 0x05	-> Teleporting
+	D0.s8 = s8[A4]
+	if (D0.s8 < 0)
+		return
+
+	if (D0.u8 == 0)
+	{
+		// Waiting for characters to reach a certain spot
+		//  - D6.u16 tells us the player index (0 or 1)
+		D0.u16 = (D6.u16 == 0) ? 0x1628 : 0x1638
+		if (D0.u16 >= objA1.position.x.u16)
+		{
+		#if STANDALONE
+			// Tails can get left behind and won't fly in properly without this
+			if (D6.u16 == 0 || tails.ai_routine != 0x04)
+		#endif
+			{
+				objA1.position.x.u16 = D0.u16
+				objA1.velocity.x = 0
+				objA1.groundspeed = 0
+			#if STANDALONE
+				objA1.flags2a |= char.flag.FACING_LEFT	// Another small fix for Tails
+			#endif
+				control.misc.pad2 = 0
+				u8[A3] = 0xff	// Activate player1.control_override / player2.control_override
+				++u8[A4]
+			}
+		}
+	}
+	else if (D0.u8 == 1)
+	{
+		if (u8[A1 + 0x2a] & char.flag.IN_AIR)
+			return
+
+		u8[A4 + 0x02] = (D6.u16 == 0) ? 0xa0 : 0xdc
+		++u8[A4]
+	}
+	else if (D0.u8 == 2)
+	{
+		if (getNumPlayers() >= 2 && u8[A5 + 0x02] == 0)
+			return
+
+		// Start camera movement to the transporter
+		u16[A0 + 0x2c] = 0x013c
+		objA0.base_state = 0x48
+		player1.camera_lock = 0xff
+		++u8[A4]
+	}
+	else if (D0.u8 == 3)
+	{
+		if (u16[A0 + 0x2c] != 0)
+			return
+
+		--u8[A4 + 0x02]
+		if (u8[A4 + 0x02] == 0)
+		{
+			objA1.velocity.x = -0x100
+			control.misc.pad2 = 0x2424		// (CONTROL_C | CONTROL_LEFT), (CONTROL_C | CONTROL_LEFT)
+			++u8[A4]
+		}
+	}
+	else if (D0.u8 == 4)
+	{
+		D0.u16 = 0x15c0
+		if (D0.u16 >= objA1.position.x.u16)
+		{
+			objA1.position.x.u16 = D0.u16
+			objA1.position.y.u16 -= 0x80
+			objA1.velocity.x = 0
+			objA1.groundspeed = 0
+			u8[A1 + 0x2e] = (control_flag.DISABLE_ANIMATION | control_flag.DISABLE_UPDATE)
+			objA1.state = char.state.RUNNING
+			u8[A1 + 0x22] = 0
+
+			u16[A2] = 0
+			playSound(0x73)
+		#if STANDALONE
+			Input.setControllerRumble(-1, 0.0f, 0.5f, 500)
+		#endif
+
+			if (D6.u16 != 0)
+			{
+				u8[A4] = 0xff
+			}
+			else
+			{
+				u8[A4 + 0x02] = (getNumPlayers() >= 2) ? 0x78 : 0x3c
+				++u8[A4]
+			}
+		}
+		else
+		{
+			control.misc.pad2 = 0x2404		// (CONTROL_C | CONTROL_LEFT), CONTROL_LEFT
+		}
+	}
+	else
+	{
+		--u8[A4 + 0x02]
+		if (u8[A4 + 0x02] == 0)
+		{
+			playMusic(MUSIC_CTRL_FADEOUT)
+
+			sram.block_interrupts.u8 = 0xff
+			SaveGameOnLevelFinished()
+
+			TriggerNextZone(0x0a00)		// Sonic/Tails Sky Sanctuary act
+		}
+	}
 }

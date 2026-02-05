@@ -222,3 +222,20 @@ function bool Tenna.useFinalBossSuperSonicAnimation()
 
 	return base.Tenna.useFinalBossSuperSonicAnimation()
 }
+
+function u16 charrk_getCharDmgDeal()
+{
+	if (global.characters == CHARACTER_REIMU) || (global.characters == CHARACTER_REIMU_TAILS)
+		return base.charrk_getCharDmgDeal() * 10
+
+return base.charrk_getCharDmgDeal()
+}
+
+constant array<string> AmyMISC.isCharacterArr =
+{
+	"Tails (Default)",
+	"Sonic",
+	"Knuckles",
+	"Amy",
+	"None",
+}
