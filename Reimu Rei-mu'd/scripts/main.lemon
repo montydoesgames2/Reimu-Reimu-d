@@ -1,5 +1,15 @@
-include misc/?
 include character/?
 include other/?
+include misc/?
 
 #define REIMUREIMUD
+
+function bool isReimu()
+{
+	if (global.characters == CHARACTER_REIMU || global.characters == CHARACTER_REIMU_TAILS)
+		return true
+	else if (MISC.player1.character == CHARACTER_REIMU || MISC.player2.character == CHARACTER_REIMU)
+		return true
+
+	return false
+}
